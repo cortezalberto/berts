@@ -1,3 +1,4 @@
+import { memo, useMemo } from 'react'
 import {
   Package,
   FolderTree,
@@ -10,10 +11,20 @@ import {
 } from 'lucide-react'
 import { PageContainer } from '../components/layout'
 import { Card } from '../components/ui'
-import { useCategoryStore } from '../stores/categoryStore'
-import { useSubcategoryStore } from '../stores/subcategoryStore'
-import { useProductStore } from '../stores/productStore'
-import { useRestaurantStore } from '../stores/restaurantStore'
+import {
+  useCategoryStore,
+  selectCategories,
+} from '../stores/categoryStore'
+import {
+  useSubcategoryStore,
+  selectSubcategories,
+} from '../stores/subcategoryStore'
+import {
+  useProductStore,
+  selectProducts,
+} from '../stores/productStore'
+import { useRestaurantStore, selectRestaurant } from '../stores/restaurantStore'
+import { HOME_CATEGORY_ID, LOCALE } from '../utils/constants'
 
 interface StatCardProps {
   title: string
@@ -23,7 +34,13 @@ interface StatCardProps {
   description?: string
 }
 
-function StatCard({ title, value, icon, trend, description }: StatCardProps) {
+const StatCard = memo(function StatCard({
+  title,
+  value,
+  icon,
+  trend,
+  description,
+}: StatCardProps) {
   return (
     <Card>
       <div className="flex items-start justify-between">
@@ -33,9 +50,9 @@ function StatCard({ title, value, icon, trend, description }: StatCardProps) {
           {trend && (
             <div className="mt-2 flex items-center gap-1">
               {trend.isPositive ? (
-                <ArrowUpRight className="w-4 h-4 text-green-500" />
+                <ArrowUpRight className="w-4 h-4 text-green-500" aria-hidden="true" />
               ) : (
-                <ArrowDownRight className="w-4 h-4 text-red-500" />
+                <ArrowDownRight className="w-4 h-4 text-red-500" aria-hidden="true" />
               )}
               <span
                 className={`text-sm font-medium ${
@@ -51,13 +68,13 @@ function StatCard({ title, value, icon, trend, description }: StatCardProps) {
             <p className="mt-1 text-sm text-zinc-500">{description}</p>
           )}
         </div>
-        <div className="p-3 bg-orange-500/10 rounded-xl">
+        <div className="p-3 bg-orange-500/10 rounded-xl" aria-hidden="true">
           {icon}
         </div>
       </div>
     </Card>
   )
-}
+})
 
 interface RecentItemProps {
   name: string
@@ -66,7 +83,19 @@ interface RecentItemProps {
   image?: string
 }
 
-function RecentItem({ name, category, price, image }: RecentItemProps) {
+const RecentItem = memo(function RecentItem({
+  name,
+  category,
+  price,
+  image,
+}: RecentItemProps) {
+  const formattedPrice = useMemo(() => {
+    return new Intl.NumberFormat(LOCALE.LANGUAGE, {
+      style: 'currency',
+      currency: LOCALE.CURRENCY,
+    }).format(price)
+  }, [price])
+
   return (
     <div className="flex items-center gap-3 py-3 border-b border-zinc-800 last:border-0">
       {image ? (
@@ -77,51 +106,82 @@ function RecentItem({ name, category, price, image }: RecentItemProps) {
         />
       ) : (
         <div className="w-10 h-10 rounded-lg bg-zinc-800 flex items-center justify-center">
-          <Package className="w-5 h-5 text-zinc-600" />
+          <Package className="w-5 h-5 text-zinc-600" aria-hidden="true" />
         </div>
       )}
       <div className="flex-1 min-w-0">
         <p className="font-medium text-white truncate">{name}</p>
         <p className="text-xs text-zinc-500">{category}</p>
       </div>
-      <p className="font-medium text-orange-500">
-        ${price.toFixed(2)}
-      </p>
+      <p className="font-medium text-orange-500">{formattedPrice}</p>
     </div>
   )
-}
+})
 
 export function DashboardPage() {
-  const { restaurant } = useRestaurantStore()
-  const { categories } = useCategoryStore()
-  const { subcategories } = useSubcategoryStore()
-  const { products } = useProductStore()
+  // Using basic selectors that return stable references
+  const restaurant = useRestaurantStore(selectRestaurant)
+  const products = useProductStore(selectProducts)
+  const categories = useCategoryStore(selectCategories)
+  const subcategories = useSubcategoryStore(selectSubcategories)
 
-  // Calculate statistics
-  const activeProducts = products.filter((p) => p.is_active !== false)
-  const featuredProducts = products.filter((p) => p.featured)
-  const popularProducts = products.filter((p) => p.popular)
-  const activeCategories = categories.filter((c) => c.is_active !== false && c.id !== '0')
+  // Derive filtered data with useMemo to avoid infinite loops
+  const activeProducts = useMemo(
+    () => products.filter((p) => p.is_active !== false),
+    [products]
+  )
+  const featuredProducts = useMemo(
+    () => products.filter((p) => p.featured),
+    [products]
+  )
+  const popularProducts = useMemo(
+    () => products.filter((p) => p.popular),
+    [products]
+  )
+  const activeCategories = useMemo(
+    () => categories.filter((c) => c.is_active !== false && c.id !== HOME_CATEGORY_ID),
+    [categories]
+  )
 
-  // Get recent products (last 5)
-  const recentProducts = [...products]
-    .sort((a, b) => {
-      const dateA = a.created_at ? new Date(a.created_at).getTime() : 0
-      const dateB = b.created_at ? new Date(b.created_at).getTime() : 0
-      return dateB - dateA
-    })
-    .slice(0, 5)
+  // Memoized calculations
+  const activeSubcategoriesCount = useMemo(
+    () => subcategories.filter((s) => s.is_active !== false).length,
+    [subcategories]
+  )
 
-  // Get category name helper
-  const getCategoryName = (categoryId: string): string => {
-    return categories.find((c) => c.id === categoryId)?.name || 'Sin categoria'
-  }
+  const recentProducts = useMemo(() => {
+    return [...products]
+      .sort((a, b) => {
+        const dateA = a.created_at ? new Date(a.created_at).getTime() : 0
+        const dateB = b.created_at ? new Date(b.created_at).getTime() : 0
+        return dateB - dateA
+      })
+      .slice(0, 5)
+  }, [products])
 
-  // Products by category
-  const productsByCategory = activeCategories.map((category) => {
-    const count = products.filter((p) => p.category_id === category.id).length
-    return { name: category.name, count }
-  })
+  const getCategoryName = useMemo(() => {
+    const categoryMap = new Map(activeCategories.map((c) => [c.id, c.name]))
+    return (categoryId: string): string => categoryMap.get(categoryId) || 'Sin categoria'
+  }, [activeCategories])
+
+  const productsByCategory = useMemo(() => {
+    return activeCategories
+      .filter((c) => c.id !== HOME_CATEGORY_ID)
+      .map((category) => {
+        const count = products.filter((p) => p.category_id === category.id).length
+        return { name: category.name, count }
+      })
+  }, [activeCategories, products])
+
+  const averagePrice = useMemo(() => {
+    if (products.length === 0) return '0.00'
+    return (products.reduce((sum, p) => sum + p.price, 0) / products.length).toFixed(2)
+  }, [products])
+
+  const productsWithBadge = useMemo(
+    () => products.filter((p) => p.badge).length,
+    [products]
+  )
 
   return (
     <PageContainer
@@ -204,7 +264,13 @@ export function DashboardPage() {
                       {item.count} productos
                     </span>
                   </div>
-                  <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
+                  <div
+                    className="h-2 bg-zinc-800 rounded-full overflow-hidden"
+                    role="progressbar"
+                    aria-valuenow={products.length > 0 ? (item.count / products.length) * 100 : 0}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                  >
                     <div
                       className="h-full bg-orange-500 rounded-full transition-all"
                       style={{
@@ -233,12 +299,12 @@ export function DashboardPage() {
         <Card>
           <div className="flex items-center gap-3">
             <div className="p-2 bg-green-500/10 rounded-lg">
-              <CheckCircle className="w-5 h-5 text-green-500" />
+              <CheckCircle className="w-5 h-5 text-green-500" aria-hidden="true" />
             </div>
             <div>
               <p className="text-sm text-zinc-500">Subcategorias Activas</p>
               <p className="text-xl font-bold text-white">
-                {subcategories.filter((s) => s.is_active !== false).length}
+                {activeSubcategoriesCount}
               </p>
             </div>
           </div>
@@ -247,19 +313,11 @@ export function DashboardPage() {
         <Card>
           <div className="flex items-center gap-3">
             <div className="p-2 bg-blue-500/10 rounded-lg">
-              <Layers className="w-5 h-5 text-blue-500" />
+              <Layers className="w-5 h-5 text-blue-500" aria-hidden="true" />
             </div>
             <div>
               <p className="text-sm text-zinc-500">Promedio Precio</p>
-              <p className="text-xl font-bold text-white">
-                $
-                {products.length > 0
-                  ? (
-                      products.reduce((sum, p) => sum + p.price, 0) /
-                      products.length
-                    ).toFixed(2)
-                  : '0.00'}
-              </p>
+              <p className="text-xl font-bold text-white">${averagePrice}</p>
             </div>
           </div>
         </Card>
@@ -267,13 +325,11 @@ export function DashboardPage() {
         <Card>
           <div className="flex items-center gap-3">
             <div className="p-2 bg-purple-500/10 rounded-lg">
-              <Package className="w-5 h-5 text-purple-500" />
+              <Package className="w-5 h-5 text-purple-500" aria-hidden="true" />
             </div>
             <div>
               <p className="text-sm text-zinc-500">Con Badge</p>
-              <p className="text-xl font-bold text-white">
-                {products.filter((p) => p.badge).length}
-              </p>
+              <p className="text-xl font-bold text-white">{productsWithBadge}</p>
             </div>
           </div>
         </Card>

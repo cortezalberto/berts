@@ -1,9 +1,11 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Building2 } from 'lucide-react'
 import { PageContainer } from '../components/layout'
 import { Card, CardHeader, Button, Input, Textarea, ImageUpload } from '../components/ui'
 import { useRestaurantStore } from '../stores/restaurantStore'
 import { toast } from '../stores/toastStore'
+import { validateRestaurant, type ValidationErrors } from '../utils/validation'
+import { handleError } from '../utils/logger'
 import type { RestaurantFormData } from '../types'
 
 export function RestaurantPage() {
@@ -21,7 +23,7 @@ export function RestaurantPage() {
     email: '',
   })
 
-  const [errors, setErrors] = useState<Partial<Record<keyof RestaurantFormData, string>>>({})
+  const [errors, setErrors] = useState<ValidationErrors<RestaurantFormData>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   useEffect(() => {
@@ -40,61 +42,48 @@ export function RestaurantPage() {
     }
   }, [restaurant])
 
-  const validateForm = (): boolean => {
-    const newErrors: Partial<Record<keyof RestaurantFormData, string>> = {}
+  const handleSubmit = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault()
 
-    if (!formData.name.trim()) {
-      newErrors.name = 'El nombre es requerido'
-    }
-    if (!formData.slug.trim()) {
-      newErrors.slug = 'El slug es requerido'
-    } else if (!/^[a-z0-9-]+$/.test(formData.slug)) {
-      newErrors.slug = 'Solo letras minusculas, numeros y guiones'
-    }
-    if (!formData.description.trim()) {
-      newErrors.description = 'La descripcion es requerida'
-    }
-    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = 'Email invalido'
-    }
-
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-
-    if (!validateForm()) return
-
-    setIsSubmitting(true)
-
-    try {
-      if (restaurant) {
-        updateRestaurant(formData)
-        toast.success('Restaurante actualizado correctamente')
-      } else {
-        createRestaurant(formData)
-        toast.success('Restaurante creado correctamente')
+      const validation = validateRestaurant(formData)
+      if (!validation.isValid) {
+        setErrors(validation.errors)
+        return
       }
-    } catch {
-      toast.error('Error al guardar el restaurante')
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
-    const { name, value } = e.target
-    setFormData((prev) => ({ ...prev, [name]: value }))
-    if (errors[name as keyof RestaurantFormData]) {
-      setErrors((prev) => ({ ...prev, [name]: undefined }))
-    }
-  }
+      setIsSubmitting(true)
 
-  const generateSlug = () => {
+      try {
+        if (restaurant) {
+          updateRestaurant(formData)
+          toast.success('Restaurante actualizado correctamente')
+        } else {
+          createRestaurant(formData)
+          toast.success('Restaurante creado correctamente')
+        }
+      } catch (error) {
+        const message = handleError(error, 'RestaurantPage.handleSubmit')
+        toast.error(`Error al guardar el restaurante: ${message}`)
+      } finally {
+        setIsSubmitting(false)
+      }
+    },
+    [formData, restaurant, updateRestaurant, createRestaurant]
+  )
+
+  const handleChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+      const { name, value } = e.target
+      setFormData((prev) => ({ ...prev, [name]: value }))
+      if (errors[name as keyof RestaurantFormData]) {
+        setErrors((prev) => ({ ...prev, [name]: undefined }))
+      }
+    },
+    [errors]
+  )
+
+  const generateSlug = useCallback(() => {
     const slug = formData.name
       .toLowerCase()
       .normalize('NFD')
@@ -104,7 +93,7 @@ export function RestaurantPage() {
       .replace(/-+/g, '-')
       .trim()
     setFormData((prev) => ({ ...prev, slug }))
-  }
+  }, [formData.name])
 
   return (
     <PageContainer

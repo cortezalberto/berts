@@ -1,17 +1,15 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { Restaurant, RestaurantFormData } from '../types'
+import { STORAGE_KEYS, STORE_VERSIONS } from '../utils/constants'
 
 interface RestaurantState {
   restaurant: Restaurant | null
-  isLoading: boolean
-  error: string | null
-
   // Actions
   setRestaurant: (restaurant: Restaurant) => void
   updateRestaurant: (data: RestaurantFormData) => void
   createRestaurant: (data: RestaurantFormData) => void
-  clearError: () => void
+  clearRestaurant: () => void
 }
 
 const generateId = () => crypto.randomUUID()
@@ -20,8 +18,6 @@ export const useRestaurantStore = create<RestaurantState>()(
   persist(
     (set) => ({
       restaurant: null,
-      isLoading: false,
-      error: null,
 
       setRestaurant: (restaurant) => set({ restaurant }),
 
@@ -47,10 +43,14 @@ export const useRestaurantStore = create<RestaurantState>()(
           }
         }),
 
-      clearError: () => set({ error: null }),
+      clearRestaurant: () => set({ restaurant: null }),
     }),
     {
-      name: 'dashboard-restaurant',
+      name: STORAGE_KEYS.RESTAURANT,
+      version: STORE_VERSIONS.RESTAURANT,
     }
   )
 )
+
+// Selectors
+export const selectRestaurant = (state: RestaurantState) => state.restaurant

@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react'
-import { Plus, Pencil, Trash2, Filter, Star, TrendingUp } from 'lucide-react'
+import { useState, useMemo, useCallback } from 'react'
+import { Plus, Pencil, Trash2, Filter, Star, TrendingUp, AlertTriangle } from 'lucide-react'
 import { PageContainer } from '../components/layout'
 import {
   Card,
@@ -13,11 +13,15 @@ import {
   Toggle,
   ConfirmDialog,
   Badge,
+  AllergenSelect,
 } from '../components/ui'
-import { useCategoryStore } from '../stores/categoryStore'
-import { useSubcategoryStore } from '../stores/subcategoryStore'
-import { useProductStore } from '../stores/productStore'
+import { useCategoryStore, selectCategories } from '../stores/categoryStore'
+import { useSubcategoryStore, selectSubcategories } from '../stores/subcategoryStore'
+import { useProductStore, selectProducts } from '../stores/productStore'
+import { useAllergenStore, selectAllergens } from '../stores/allergenStore'
 import { toast } from '../stores/toastStore'
+import { validateProduct, type ValidationErrors } from '../utils/validation'
+import { handleError } from '../utils/logger'
 import type { Product, ProductFormData, TableColumn } from '../types'
 
 const initialFormData: ProductFormData = {
@@ -30,31 +34,46 @@ const initialFormData: ProductFormData = {
   featured: false,
   popular: false,
   badge: '',
-  allergens: [],
+  allergen_ids: [],
   is_active: true,
   stock: undefined,
 }
 
 export function ProductsPage() {
-  const { categories } = useCategoryStore()
-  const { subcategories, getByCategory } = useSubcategoryStore()
-  const { products, addProduct, updateProduct, deleteProduct } = useProductStore()
+  const categories = useCategoryStore(selectCategories)
+  const subcategories = useSubcategoryStore(selectSubcategories)
+  const getByCategory = useSubcategoryStore((s) => s.getByCategory)
+  const products = useProductStore(selectProducts)
+  const addProduct = useProductStore((s) => s.addProduct)
+  const updateProduct = useProductStore((s) => s.updateProduct)
+  const deleteProduct = useProductStore((s) => s.deleteProduct)
+  const allergens = useAllergenStore(selectAllergens)
 
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
   const [formData, setFormData] = useState<ProductFormData>(initialFormData)
-  const [errors, setErrors] = useState<Partial<Record<keyof ProductFormData, string>>>({})
+  const [errors, setErrors] = useState<ValidationErrors<ProductFormData>>({})
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [filterCategory, setFilterCategory] = useState<string>('')
   const [filterSubcategory, setFilterSubcategory] = useState<string>('')
 
   // Filter categories (exclude Home category with id '0')
-  const selectableCategories = categories.filter((c) => c.id !== '0')
+  const selectableCategories = useMemo(
+    () => categories.filter((c) => c.id !== '0'),
+    [categories]
+  )
 
-  const categoryOptions = selectableCategories.map((c) => ({
-    value: c.id,
-    label: c.name,
-  }))
+  const categoryOptions = useMemo(
+    () => selectableCategories.map((c) => ({ value: c.id, label: c.name })),
+    [selectableCategories]
+  )
+
+  // Create allergen lookup map for performance
+  const allergenMap = useMemo(
+    () => new Map(allergens.map((a) => [a.id, a])),
+    [allergens]
+  )
 
   // Get subcategories for selected category in form
   const formSubcategoryOptions = useMemo(() => {
@@ -113,7 +132,7 @@ export function ProductsPage() {
     setIsModalOpen(true)
   }
 
-  const openEditModal = (product: Product) => {
+  const openEditModal = useCallback((product: Product) => {
     setSelectedProduct(product)
     setFormData({
       name: product.name,
@@ -125,45 +144,27 @@ export function ProductsPage() {
       featured: product.featured,
       popular: product.popular,
       badge: product.badge || '',
-      allergens: product.allergens || [],
+      allergen_ids: product.allergen_ids || [],
       is_active: product.is_active ?? true,
       stock: product.stock,
     })
     setErrors({})
     setIsModalOpen(true)
-  }
+  }, [])
 
-  const openDeleteDialog = (product: Product) => {
+  const openDeleteDialog = useCallback((product: Product) => {
     setSelectedProduct(product)
     setIsDeleteOpen(true)
-  }
+  }, [])
 
-  const validateForm = (): boolean => {
-    const newErrors: Partial<Record<keyof ProductFormData, string>> = {}
-
-    if (!formData.name.trim()) {
-      newErrors.name = 'El nombre es requerido'
-    }
-    if (!formData.description.trim()) {
-      newErrors.description = 'La descripcion es requerida'
-    }
-    if (formData.price <= 0) {
-      newErrors.price = 'El precio debe ser mayor a 0'
-    }
-    if (!formData.category_id) {
-      newErrors.category_id = 'La categoria es requerida'
-    }
-    if (!formData.subcategory_id) {
-      newErrors.subcategory_id = 'La subcategoria es requerida'
+  const handleSubmit = useCallback(async () => {
+    const validation = validateProduct(formData)
+    if (!validation.isValid) {
+      setErrors(validation.errors)
+      return
     }
 
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }
-
-  const handleSubmit = () => {
-    if (!validateForm()) return
-
+    setIsSubmitting(true)
     try {
       if (selectedProduct) {
         updateProduct(selectedProduct.id, formData)
@@ -173,22 +174,26 @@ export function ProductsPage() {
         toast.success('Producto creado correctamente')
       }
       setIsModalOpen(false)
-    } catch {
-      toast.error('Error al guardar el producto')
+    } catch (error) {
+      const message = handleError(error, 'ProductsPage.handleSubmit')
+      toast.error(`Error al guardar el producto: ${message}`)
+    } finally {
+      setIsSubmitting(false)
     }
-  }
+  }, [formData, selectedProduct, updateProduct, addProduct])
 
-  const handleDelete = () => {
+  const handleDelete = useCallback(() => {
     if (!selectedProduct) return
 
     try {
       deleteProduct(selectedProduct.id)
       toast.success('Producto eliminado correctamente')
       setIsDeleteOpen(false)
-    } catch {
-      toast.error('Error al eliminar el producto')
+    } catch (error) {
+      const message = handleError(error, 'ProductsPage.handleDelete')
+      toast.error(`Error al eliminar el producto: ${message}`)
     }
-  }
+  }, [selectedProduct, deleteProduct])
 
   const handleCategoryChange = (categoryId: string) => {
     const subcats = getByCategory(categoryId)
@@ -208,11 +213,14 @@ export function ProductsPage() {
         item.image ? (
           <img
             src={item.image}
-            alt={item.name}
+            alt={`Imagen de ${item.name}`}
             className="w-12 h-12 rounded-lg object-cover"
           />
         ) : (
-          <div className="w-12 h-12 rounded-lg bg-zinc-800 flex items-center justify-center text-zinc-600">
+          <div
+            className="w-12 h-12 rounded-lg bg-zinc-800 flex items-center justify-center text-zinc-600"
+            aria-label="Sin imagen"
+          >
             -
           </div>
         ),
@@ -224,8 +232,8 @@ export function ProductsPage() {
         <div>
           <div className="flex items-center gap-2">
             <span className="font-medium">{item.name}</span>
-            {item.featured && <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />}
-            {item.popular && <TrendingUp className="w-4 h-4 text-green-500" />}
+            {item.featured && <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" aria-label="Destacado" />}
+            {item.popular && <TrendingUp className="w-4 h-4 text-green-500" aria-label="Popular" />}
           </div>
           <p className="text-xs text-zinc-500 mt-0.5 line-clamp-1">
             {item.description}
@@ -254,6 +262,35 @@ export function ProductsPage() {
       ),
     },
     {
+      key: 'allergen_ids',
+      label: 'Alergenos',
+      width: 'w-32',
+      render: (item) => {
+        const productAllergens = (item.allergen_ids || [])
+          .map((id) => allergenMap.get(id))
+          .filter(Boolean)
+        if (productAllergens.length === 0) {
+          return <span className="text-zinc-600">-</span>
+        }
+        return (
+          <div className="flex flex-wrap gap-1" title={productAllergens.map((a) => a?.name).join(', ')}>
+            {productAllergens.slice(0, 3).map((allergen) => (
+              <span
+                key={allergen?.id}
+                className="text-lg"
+                aria-label={allergen?.name}
+              >
+                {allergen?.icon}
+              </span>
+            ))}
+            {productAllergens.length > 3 && (
+              <span className="text-xs text-zinc-500">+{productAllergens.length - 3}</span>
+            )}
+          </div>
+        )
+      },
+    },
+    {
       key: 'badge',
       label: 'Badge',
       width: 'w-24',
@@ -270,9 +307,13 @@ export function ProductsPage() {
       width: 'w-24',
       render: (item) =>
         item.is_active !== false ? (
-          <Badge variant="success">Activo</Badge>
+          <Badge variant="success">
+            <span className="sr-only">Estado:</span> Activo
+          </Badge>
         ) : (
-          <Badge variant="danger">Inactivo</Badge>
+          <Badge variant="danger">
+            <span className="sr-only">Estado:</span> Inactivo
+          </Badge>
         ),
     },
     {
@@ -288,8 +329,9 @@ export function ProductsPage() {
               e.stopPropagation()
               openEditModal(item)
             }}
+            aria-label={`Editar ${item.name}`}
           >
-            <Pencil className="w-4 h-4" />
+            <Pencil className="w-4 h-4" aria-hidden="true" />
           </Button>
           <Button
             variant="ghost"
@@ -299,8 +341,9 @@ export function ProductsPage() {
               openDeleteDialog(item)
             }}
             className="text-red-500 hover:text-red-400 hover:bg-red-500/10"
+            aria-label={`Eliminar ${item.name}`}
           >
-            <Trash2 className="w-4 h-4" />
+            <Trash2 className="w-4 h-4" aria-hidden="true" />
           </Button>
         </div>
       ),
@@ -320,7 +363,7 @@ export function ProductsPage() {
       {/* Filters */}
       <Card className="mb-6">
         <div className="flex items-center gap-4 flex-wrap">
-          <Filter className="w-5 h-5 text-zinc-500" />
+          <Filter className="w-5 h-5 text-zinc-500" aria-hidden="true" />
           <Select
             options={[
               { value: '', label: 'Todas las categorias' },
@@ -332,6 +375,7 @@ export function ProductsPage() {
               setFilterSubcategory('')
             }}
             className="w-48"
+            aria-label="Filtrar por categoria"
           />
           {filterCategory && (
             <Select
@@ -342,6 +386,7 @@ export function ProductsPage() {
               value={filterSubcategory}
               onChange={(e) => setFilterSubcategory(e.target.value)}
               className="w-48"
+              aria-label="Filtrar por subcategoria"
             />
           )}
           {(filterCategory || filterSubcategory) && (
@@ -381,7 +426,7 @@ export function ProductsPage() {
             <Button variant="ghost" onClick={() => setIsModalOpen(false)}>
               Cancelar
             </Button>
-            <Button onClick={handleSubmit}>
+            <Button onClick={handleSubmit} isLoading={isSubmitting}>
               {selectedProduct ? 'Guardar' : 'Crear'}
             </Button>
           </>
@@ -463,6 +508,14 @@ export function ProductsPage() {
             value={formData.image}
             onChange={(url) =>
               setFormData((prev) => ({ ...prev, image: url }))
+            }
+          />
+
+          <AllergenSelect
+            label="Alergenos"
+            value={formData.allergen_ids}
+            onChange={(allergenIds) =>
+              setFormData((prev) => ({ ...prev, allergen_ids: allergenIds }))
             }
           />
 

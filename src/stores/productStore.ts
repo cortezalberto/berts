@@ -1,12 +1,10 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { Product, ProductFormData } from '../types'
+import { STORAGE_KEYS, STORE_VERSIONS } from '../utils/constants'
 
 interface ProductState {
   products: Product[]
-  isLoading: boolean
-  error: string | null
-
   // Actions
   setProducts: (products: Product[]) => void
   addProduct: (data: ProductFormData) => Product
@@ -16,12 +14,11 @@ interface ProductState {
   getBySubcategory: (subcategoryId: string) => Product[]
   deleteByCategory: (categoryId: string) => void
   deleteBySubcategory: (subcategoryId: string) => void
-  clearError: () => void
 }
 
 const generateId = () => crypto.randomUUID()
 
-// Initial mock products
+// Initial mock products with allergen_ids
 const initialProducts: Product[] = [
   {
     id: '1',
@@ -34,6 +31,7 @@ const initialProducts: Product[] = [
     featured: true,
     popular: true,
     badge: 'TEX MEX',
+    allergen_ids: ['alg-7', 'alg-2'], // Soja, Lacteos
     is_active: true,
   },
   {
@@ -46,6 +44,7 @@ const initialProducts: Product[] = [
     subcategory_id: 'sub-2',
     featured: true,
     popular: true,
+    allergen_ids: ['alg-2'], // Lacteos
     is_active: true,
   },
   {
@@ -58,6 +57,7 @@ const initialProducts: Product[] = [
     subcategory_id: 'sub-1',
     featured: true,
     popular: true,
+    allergen_ids: ['alg-1', 'alg-3', 'alg-10'], // Gluten, Huevos, Sesamo
     is_active: true,
   },
   {
@@ -71,6 +71,7 @@ const initialProducts: Product[] = [
     featured: false,
     popular: true,
     badge: 'VEGANO',
+    allergen_ids: [], // Sin alergenos
     is_active: true,
   },
   {
@@ -83,6 +84,7 @@ const initialProducts: Product[] = [
     subcategory_id: 'sub-4',
     featured: true,
     popular: false,
+    allergen_ids: ['alg-4', 'alg-2'], // Pescado, Lacteos
     is_active: true,
   },
   {
@@ -95,6 +97,7 @@ const initialProducts: Product[] = [
     subcategory_id: 'sub-2',
     featured: false,
     popular: true,
+    allergen_ids: ['alg-1', 'alg-2', 'alg-3'], // Gluten, Lacteos, Huevos
     is_active: true,
   },
   {
@@ -107,6 +110,7 @@ const initialProducts: Product[] = [
     subcategory_id: 'sub-6',
     featured: false,
     popular: true,
+    allergen_ids: ['alg-1'], // Gluten
     is_active: true,
   },
   {
@@ -119,6 +123,7 @@ const initialProducts: Product[] = [
     subcategory_id: 'sub-8',
     featured: false,
     popular: true,
+    allergen_ids: [],
     is_active: true,
   },
   {
@@ -131,6 +136,7 @@ const initialProducts: Product[] = [
     subcategory_id: 'sub-10',
     featured: true,
     popular: true,
+    allergen_ids: ['alg-1', 'alg-2', 'alg-3'], // Gluten, Lacteos, Huevos
     is_active: true,
   },
   {
@@ -143,6 +149,7 @@ const initialProducts: Product[] = [
     subcategory_id: 'sub-11',
     featured: false,
     popular: true,
+    allergen_ids: ['alg-2'], // Lacteos
     is_active: true,
   },
   {
@@ -156,6 +163,7 @@ const initialProducts: Product[] = [
     featured: false,
     popular: true,
     badge: 'BBQ',
+    allergen_ids: ['alg-1', 'alg-3', 'alg-9'], // Gluten, Huevos, Mostaza
     is_active: true,
   },
   {
@@ -168,6 +176,7 @@ const initialProducts: Product[] = [
     subcategory_id: 'sub-7',
     featured: true,
     popular: true,
+    allergen_ids: ['alg-11'], // Sulfitos
     is_active: true,
   },
   {
@@ -180,6 +189,7 @@ const initialProducts: Product[] = [
     subcategory_id: 'sub-9',
     featured: false,
     popular: false,
+    allergen_ids: ['alg-11'], // Sulfitos
     is_active: true,
   },
   {
@@ -193,6 +203,7 @@ const initialProducts: Product[] = [
     featured: false,
     popular: true,
     badge: 'SALUDABLE',
+    allergen_ids: [],
     is_active: true,
   },
 ]
@@ -201,8 +212,6 @@ export const useProductStore = create<ProductState>()(
   persist(
     (set, get) => ({
       products: initialProducts,
-      isLoading: false,
-      error: null,
 
       setProducts: (products) => set({ products }),
 
@@ -210,6 +219,7 @@ export const useProductStore = create<ProductState>()(
         const newProduct: Product = {
           id: generateId(),
           ...data,
+          allergen_ids: data.allergen_ids ?? [],
           is_active: data.is_active ?? true,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
@@ -253,11 +263,28 @@ export const useProductStore = create<ProductState>()(
             (prod) => prod.subcategory_id !== subcategoryId
           ),
         })),
-
-      clearError: () => set({ error: null }),
     }),
     {
-      name: 'dashboard-products',
+      name: STORAGE_KEYS.PRODUCTS,
+      version: STORE_VERSIONS.PRODUCTS,
+      // Migration: ensure allergen_ids exists on all products
+      migrate: (persistedState, version) => {
+        const state = persistedState as { products: Product[] }
+        if (version < 2) {
+          // Add allergen_ids to products that don't have it
+          state.products = state.products.map((p) => ({
+            ...p,
+            allergen_ids: p.allergen_ids ?? [],
+          }))
+        }
+        return state
+      },
     }
   )
 )
+
+// Selectors - only use selectors that return stable references
+// For filtered data, use useMemo in components to avoid infinite loops
+export const selectProducts = (state: ProductState) => state.products
+export const selectProductById = (id: string) => (state: ProductState) =>
+  state.products.find((p) => p.id === id)

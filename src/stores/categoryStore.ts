@@ -1,26 +1,23 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { Category, CategoryFormData } from '../types'
+import { STORAGE_KEYS, STORE_VERSIONS, HOME_CATEGORY_ID } from '../utils/constants'
 
 interface CategoryState {
   categories: Category[]
-  isLoading: boolean
-  error: string | null
-
   // Actions
   setCategories: (categories: Category[]) => void
   addCategory: (data: CategoryFormData) => Category
   updateCategory: (id: string, data: Partial<CategoryFormData>) => void
   deleteCategory: (id: string) => void
   reorderCategories: (categories: Category[]) => void
-  clearError: () => void
 }
 
 const generateId = () => crypto.randomUUID()
 
 // Initial mock categories
 const initialCategories: Category[] = [
-  { id: '0', name: 'Home', order: 0, is_active: true },
+  { id: HOME_CATEGORY_ID, name: 'Home', order: 0, is_active: true },
   {
     id: '1',
     name: 'Comidas',
@@ -48,8 +45,6 @@ export const useCategoryStore = create<CategoryState>()(
   persist(
     (set, get) => ({
       categories: initialCategories,
-      isLoading: false,
-      error: null,
 
       setCategories: (categories) => set({ categories }),
 
@@ -83,11 +78,16 @@ export const useCategoryStore = create<CategoryState>()(
         })),
 
       reorderCategories: (categories) => set({ categories }),
-
-      clearError: () => set({ error: null }),
     }),
     {
-      name: 'dashboard-categories',
+      name: STORAGE_KEYS.CATEGORIES,
+      version: STORE_VERSIONS.CATEGORIES,
     }
   )
 )
+
+// Selectors - only use selectors that return stable references
+// For filtered data, use useMemo in components to avoid infinite loops
+export const selectCategories = (state: CategoryState) => state.categories
+export const selectCategoryById = (id: string) => (state: CategoryState) =>
+  state.categories.find((c) => c.id === id)

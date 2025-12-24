@@ -39,6 +39,24 @@ export interface Subcategory {
   updated_at?: string
 }
 
+// Allergen types
+export interface Allergen {
+  id: string
+  name: string
+  icon?: string
+  description?: string
+  is_active?: boolean
+  created_at?: string
+  updated_at?: string
+}
+
+export interface AllergenFormData {
+  name: string
+  icon?: string
+  description?: string
+  is_active: boolean
+}
+
 // Product types
 export interface Product {
   id: string
@@ -51,7 +69,7 @@ export interface Product {
   featured: boolean
   popular: boolean
   badge?: string | null
-  allergens?: string[]
+  allergen_ids: string[]
   is_active?: boolean
   stock?: number
   created_at?: string
@@ -85,7 +103,7 @@ export interface ProductFormData {
   featured: boolean
   popular: boolean
   badge?: string
-  allergens?: string[]
+  allergen_ids: string[]
   is_active: boolean
   stock?: number
 }

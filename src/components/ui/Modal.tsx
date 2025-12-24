@@ -1,6 +1,7 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useId } from 'react'
 import { X } from 'lucide-react'
 import { Button } from './Button'
+import { useFocusTrap } from '../../hooks'
 
 interface ModalProps {
   isOpen: boolean
@@ -26,7 +27,9 @@ export function Modal({
   footer,
   size = 'md',
 }: ModalProps) {
-  const overlayRef = useRef<HTMLDivElement>(null)
+  const titleId = useId()
+  const contentId = useId()
+  const containerRef = useFocusTrap<HTMLDivElement>(isOpen)
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -48,13 +51,18 @@ export function Modal({
 
   return (
     <div
-      ref={overlayRef}
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+      role="presentation"
       onClick={(e) => {
-        if (e.target === overlayRef.current) onClose()
+        if (e.target === e.currentTarget) onClose()
       }}
     >
       <div
+        ref={containerRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        aria-describedby={contentId}
         className={`
           w-full ${sizeStyles[size]}
           bg-zinc-900 border border-zinc-800 rounded-xl
@@ -64,19 +72,25 @@ export function Modal({
       >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-800">
-          <h2 className="text-lg font-semibold text-white">{title}</h2>
+          <h2 id={titleId} className="text-lg font-semibold text-white">
+            {title}
+          </h2>
           <Button
             variant="ghost"
             size="sm"
             onClick={onClose}
             className="p-1 -mr-2"
+            aria-label="Cerrar modal"
           >
             <X className="w-5 h-5" />
           </Button>
         </div>
 
         {/* Content */}
-        <div className="px-6 py-4 max-h-[calc(100vh-200px)] overflow-y-auto">
+        <div
+          id={contentId}
+          className="px-6 py-4 max-h-[calc(100vh-200px)] overflow-y-auto"
+        >
           {children}
         </div>
 

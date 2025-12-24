@@ -1,12 +1,10 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { Subcategory, SubcategoryFormData } from '../types'
+import { STORAGE_KEYS, STORE_VERSIONS } from '../utils/constants'
 
 interface SubcategoryState {
   subcategories: Subcategory[]
-  isLoading: boolean
-  error: string | null
-
   // Actions
   setSubcategories: (subcategories: Subcategory[]) => void
   addSubcategory: (data: SubcategoryFormData) => Subcategory
@@ -14,7 +12,6 @@ interface SubcategoryState {
   deleteSubcategory: (id: string) => void
   getByCategory: (categoryId: string) => Subcategory[]
   deleteByCategory: (categoryId: string) => void
-  clearError: () => void
 }
 
 const generateId = () => crypto.randomUUID()
@@ -126,8 +123,6 @@ export const useSubcategoryStore = create<SubcategoryState>()(
   persist(
     (set, get) => ({
       subcategories: initialSubcategories,
-      isLoading: false,
-      error: null,
 
       setSubcategories: (subcategories) => set({ subcategories }),
 
@@ -175,11 +170,16 @@ export const useSubcategoryStore = create<SubcategoryState>()(
             (sub) => sub.category_id !== categoryId
           ),
         })),
-
-      clearError: () => set({ error: null }),
     }),
     {
-      name: 'dashboard-subcategories',
+      name: STORAGE_KEYS.SUBCATEGORIES,
+      version: STORE_VERSIONS.SUBCATEGORIES,
     }
   )
 )
+
+// Selectors - only use selectors that return stable references
+// For filtered data, use useMemo in components to avoid infinite loops
+export const selectSubcategories = (state: SubcategoryState) => state.subcategories
+export const selectSubcategoryById = (id: string) => (state: SubcategoryState) =>
+  state.subcategories.find((s) => s.id === id)
