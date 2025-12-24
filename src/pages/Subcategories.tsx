@@ -14,6 +14,7 @@ import {
   ConfirmDialog,
   Badge,
   Pagination,
+  HelpButton,
 } from '../components/ui'
 import { usePagination } from '../hooks/usePagination'
 import { useCategoryStore, selectCategories } from '../stores/categoryStore'
@@ -31,6 +32,7 @@ import { toast } from '../stores/toastStore'
 import { validateSubcategory, type ValidationErrors } from '../utils/validation'
 import { handleError } from '../utils/logger'
 import { HOME_CATEGORY_NAME } from '../utils/constants'
+import { helpContent } from '../utils/helpContent'
 import type { Subcategory, SubcategoryFormData, TableColumn } from '../types'
 
 const initialFormData: SubcategoryFormData = {
@@ -56,7 +58,7 @@ export function SubcategoriesPage() {
   const deleteProductsBySubcategory = useProductStore((s) => s.deleteBySubcategory)
 
   const selectedBranchId = useBranchStore(selectSelectedBranchId)
-  const selectedBranch = useBranchStore(selectBranchById(selectedBranchId || ''))
+  const selectedBranch = useBranchStore(selectBranchById(selectedBranchId))
 
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
@@ -74,9 +76,9 @@ export function SubcategoriesPage() {
     )
   }, [categories, selectedBranchId])
 
-  // Memoized derived data
+  // Memoized derived data (Home categories already filtered by name in branchCategories)
   const selectableCategories = useMemo(
-    () => branchCategories.filter((c) => c.id !== '0'),
+    () => branchCategories,
     [branchCategories]
   )
 
@@ -312,6 +314,7 @@ export function SubcategoriesPage() {
       <PageContainer
         title="Subcategorias"
         description="Selecciona una sucursal para ver sus subcategorias"
+        helpContent={helpContent.subcategories}
       >
         <Card className="text-center py-12">
           <p className="text-zinc-500 mb-4">
@@ -327,6 +330,7 @@ export function SubcategoriesPage() {
     <PageContainer
       title={`Subcategorias - ${selectedBranch?.name || ''}`}
       description={`Administra las subcategorias de ${selectedBranch?.name || 'la sucursal'}`}
+      helpContent={helpContent.subcategories}
       actions={
         <Button onClick={openCreateModal} leftIcon={<Plus className="w-4 h-4" />}>
           Nueva Subcategoria
@@ -393,6 +397,44 @@ export function SubcategoriesPage() {
         }
       >
         <div className="space-y-4">
+          <div className="flex items-center gap-2 mb-2">
+            <HelpButton
+              title="Formulario de Subcategoria"
+              size="sm"
+              content={
+                <div className="space-y-3">
+                  <p>
+                    <strong>Completa los siguientes campos</strong> para crear o editar una subcategoria:
+                  </p>
+                  <ul className="list-disc pl-5 space-y-2">
+                    <li>
+                      <strong>Categoria:</strong> Selecciona la categoria padre a la que pertenece esta subcategoria.
+                    </li>
+                    <li>
+                      <strong>Nombre:</strong> Nombre descriptivo de la subcategoria (ej: Hamburguesas, Pastas, Cervezas). Es obligatorio.
+                    </li>
+                    <li>
+                      <strong>Imagen:</strong> Sube una imagen representativa de la subcategoria.
+                    </li>
+                    <li>
+                      <strong>Orden:</strong> Numero que define la posicion de la subcategoria dentro de su categoria. Menor numero = aparece primero.
+                    </li>
+                    <li>
+                      <strong>Subcategoria activa:</strong> Activa o desactiva la visibilidad en el menu publico.
+                    </li>
+                  </ul>
+                  <div className="bg-zinc-800 p-3 rounded-lg mt-3">
+                    <p className="text-orange-400 font-medium text-sm">Consejo:</p>
+                    <p className="text-sm mt-1">
+                      Las subcategorias ayudan a organizar mejor los productos. Por ejemplo: Bebidas &gt; Cervezas, Bebidas &gt; Jugos.
+                    </p>
+                  </div>
+                </div>
+              }
+            />
+            <span className="text-sm text-zinc-400">Ayuda sobre el formulario</span>
+          </div>
+
           <Select
             label="Categoria"
             options={categoryOptions}

@@ -25,6 +25,7 @@ import { toast } from '../stores/toastStore'
 import { validateBranch, type ValidationErrors } from '../utils/validation'
 import { handleError } from '../utils/logger'
 import { HOME_CATEGORY_NAME } from '../utils/constants'
+import { helpContent } from '../utils/helpContent'
 import type { Branch, BranchFormData, TableColumn } from '../types'
 
 const initialFormData: BranchFormData = {
@@ -145,18 +146,26 @@ export function BranchesPage() {
     if (!selectedBranch) return
 
     try {
-      // Obtener categorias de la sucursal para eliminar en cascada
+      // Validate branch exists before cascade delete
+      const branchExists = branches.some((b) => b.id === selectedBranch.id)
+      if (!branchExists) {
+        toast.error('La sucursal ya no existe')
+        setIsDeleteOpen(false)
+        return
+      }
+
+      // Get categories for cascade delete
       const branchCategories = getByBranch(selectedBranch.id)
       const categoryIds = branchCategories.map((c) => c.id)
 
-      // Eliminar en cascada: productos, subcategorias, categorias
-      deleteByProductCategories(categoryIds)
-      deleteByCategories(categoryIds)
+      // Cascade delete: products, subcategories, categories, promotions, branch
+      // Order matters: delete children first, then parents
+      if (categoryIds.length > 0) {
+        deleteByProductCategories(categoryIds)
+        deleteByCategories(categoryIds)
+      }
       deleteByBranchCategory(selectedBranch.id)
-
-      // Limpiar referencias de la sucursal en promociones
       removeBranchFromPromotions(selectedBranch.id)
-
       deleteBranch(selectedBranch.id)
 
       toast.success('Sucursal eliminada correctamente')
@@ -167,6 +176,7 @@ export function BranchesPage() {
     }
   }, [
     selectedBranch,
+    branches,
     getByBranch,
     deleteByProductCategories,
     deleteByCategories,
@@ -287,6 +297,7 @@ export function BranchesPage() {
     <PageContainer
       title="Sucursales"
       description="Administra las sucursales del restaurante"
+      helpContent={helpContent.branches}
       actions={
         <Button onClick={openCreateModal} leftIcon={<Plus className="w-4 h-4" />}>
           Nueva Sucursal

@@ -11,6 +11,7 @@ import {
   ConfirmDialog,
   Badge,
   Pagination,
+  HelpButton,
 } from '../components/ui'
 import { usePagination } from '../hooks/usePagination'
 import {
@@ -21,6 +22,7 @@ import { useProductStore, selectProducts } from '../stores/productStore'
 import { toast } from '../stores/toastStore'
 import { validateAllergen, type ValidationErrors } from '../utils/validation'
 import { handleError } from '../utils/logger'
+import { helpContent } from '../utils/helpContent'
 import type { Allergen, AllergenFormData, TableColumn } from '../types'
 
 const initialFormData: AllergenFormData = {
@@ -228,6 +230,7 @@ export function AllergensPage() {
     <PageContainer
       title="Alergenos"
       description="Administra los alergenos para los productos del menu"
+      helpContent={helpContent.allergens}
       actions={
         <Button onClick={openCreateModal} leftIcon={<Plus className="w-4 h-4" />}>
           Nuevo Alergeno
@@ -268,6 +271,41 @@ export function AllergensPage() {
         }
       >
         <div className="space-y-4">
+          <div className="flex items-center gap-2 mb-2">
+            <HelpButton
+              title="Formulario de Alergeno"
+              size="sm"
+              content={
+                <div className="space-y-3">
+                  <p>
+                    <strong>Completa los siguientes campos</strong> para crear o editar un alergeno:
+                  </p>
+                  <ul className="list-disc pl-5 space-y-2">
+                    <li>
+                      <strong>Nombre:</strong> Nombre del alergeno (ej: Gluten, Lacteos, Frutos Secos). Es obligatorio.
+                    </li>
+                    <li>
+                      <strong>Icono:</strong> Un emoji representativo del alergeno (ej: 🌾, 🥛, 🥜). Se mostrara junto a los productos.
+                    </li>
+                    <li>
+                      <strong>Descripcion:</strong> Informacion adicional sobre el alergeno para referencia.
+                    </li>
+                    <li>
+                      <strong>Alergeno activo:</strong> Activa o desactiva la disponibilidad del alergeno para asignar a productos.
+                    </li>
+                  </ul>
+                  <div className="bg-zinc-800 p-3 rounded-lg mt-3">
+                    <p className="text-orange-400 font-medium text-sm">Consejo:</p>
+                    <p className="text-sm mt-1">
+                      Usa emojis claros y reconocibles para que los clientes identifiquen rapidamente los alergenos en el menu.
+                    </p>
+                  </div>
+                </div>
+              }
+            />
+            <span className="text-sm text-zinc-400">Ayuda sobre el formulario</span>
+          </div>
+
           <Input
             label="Nombre"
             value={formData.name}

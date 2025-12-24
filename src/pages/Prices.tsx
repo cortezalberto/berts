@@ -11,6 +11,7 @@ import {
   Select,
   Badge,
   Pagination,
+  HelpButton,
 } from '../components/ui'
 import { usePagination } from '../hooks/usePagination'
 import { useCategoryStore, selectCategories } from '../stores/categoryStore'
@@ -25,6 +26,7 @@ import {
 import { toast } from '../stores/toastStore'
 import { handleError } from '../utils/logger'
 import { HOME_CATEGORY_NAME } from '../utils/constants'
+import { helpContent } from '../utils/helpContent'
 import type { Product, TableColumn, BranchPrice } from '../types'
 
 interface PriceEdit {
@@ -44,7 +46,7 @@ export function PricesPage() {
   const branches = useBranchStore(selectBranches)
 
   const selectedBranchId = useBranchStore(selectSelectedBranchId)
-  const selectedBranch = useBranchStore(selectBranchById(selectedBranchId || ''))
+  const selectedBranch = useBranchStore(selectBranchById(selectedBranchId))
 
   const [filterCategory, setFilterCategory] = useState<string>('')
   const [filterSubcategory, setFilterSubcategory] = useState<string>('')
@@ -125,11 +127,12 @@ export function PricesPage() {
 
   // Get price display for a product
   const getPriceDisplay = (product: Product): { text: string; detail?: string } => {
-    if (!product.use_branch_prices || product.branch_prices.length === 0) {
+    const branchPrices = product.branch_prices ?? []
+    if (!product.use_branch_prices || branchPrices.length === 0) {
       return { text: formatPrice(product.price) }
     }
 
-    const activePrices = product.branch_prices
+    const activePrices = branchPrices
       .filter((bp) => bp.is_active)
       .map((bp) => bp.price)
 
@@ -308,8 +311,33 @@ export function PricesPage() {
     },
     {
       key: 'price',
-      label: 'Precio Base',
-      width: 'w-32',
+      label: (
+        <div className="flex items-center gap-2">
+          <HelpButton
+            title="Editar Precio"
+            size="sm"
+            content={
+              <div className="space-y-3">
+                <p>
+                  <strong>Haz clic en cualquier fila</strong> de la tabla o en el boton "Editar" para abrir el modal de edicion de precios.
+                </p>
+                <p className="font-semibold">En el modal puedes:</p>
+                <ul className="list-disc pl-5 space-y-2">
+                  <li><strong>Precio Base:</strong> Modificar el precio principal del producto que se usa cuando no hay precios por sucursal.</li>
+                  <li><strong>Precios por Sucursal:</strong> Activar el toggle "Precios diferentes por sucursal" para configurar precios individuales en cada sucursal.</li>
+                  <li><strong>Activar/Desactivar:</strong> Con el checkbox de cada sucursal puedes indicar si el producto se vende o no en esa ubicacion.</li>
+                  <li><strong>Aplicar precio base:</strong> Usa este boton para copiar el precio base a todas las sucursales activas rapidamente.</li>
+                </ul>
+                <p className="text-orange-400">
+                  <strong>Tip:</strong> Si solo necesitas un precio unico para todas las sucursales, deja desactivado el toggle de precios por sucursal.
+                </p>
+              </div>
+            }
+          />
+          <span>Precio Base</span>
+        </div>
+      ),
+      width: 'w-40',
       render: (item) => (
         <span className="font-medium text-orange-500">{formatPrice(item.price)}</span>
       ),
@@ -371,6 +399,7 @@ export function PricesPage() {
       <PageContainer
         title="Precios"
         description="Selecciona una sucursal para gestionar precios"
+        helpContent={helpContent.prices}
       >
         <Card className="text-center py-12">
           <p className="text-zinc-500 mb-4">
@@ -386,6 +415,7 @@ export function PricesPage() {
     <PageContainer
       title={`Precios - ${selectedBranch?.name || ''}`}
       description={`Gestion de precios de ${selectedBranch?.name || 'la sucursal'}`}
+      helpContent={helpContent.prices}
       actions={
         <Button
           onClick={() => setIsBulkModalOpen(true)}

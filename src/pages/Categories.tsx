@@ -13,6 +13,7 @@ import {
   ConfirmDialog,
   Badge,
   Pagination,
+  HelpButton,
 } from '../components/ui'
 import { usePagination } from '../hooks/usePagination'
 import {
@@ -30,6 +31,7 @@ import { toast } from '../stores/toastStore'
 import { validateCategory, type ValidationErrors } from '../utils/validation'
 import { handleError } from '../utils/logger'
 import { HOME_CATEGORY_NAME } from '../utils/constants'
+import { helpContent } from '../utils/helpContent'
 import type { Category, CategoryFormData, TableColumn } from '../types'
 
 const initialFormData: CategoryFormData = {
@@ -49,7 +51,7 @@ export function CategoriesPage() {
   const deleteCategory = useCategoryStore((s) => s.deleteCategory)
 
   const selectedBranchId = useBranchStore(selectSelectedBranchId)
-  const selectedBranch = useBranchStore(selectBranchById(selectedBranchId || ''))
+  const selectedBranch = useBranchStore(selectBranchById(selectedBranchId))
 
   const deleteSubcategoriesByCategory = useSubcategoryStore((s) => s.deleteByCategory)
   const getByCategory = useSubcategoryStore((s) => s.getByCategory)
@@ -281,6 +283,7 @@ export function CategoriesPage() {
       <PageContainer
         title="Categorias"
         description="Selecciona una sucursal para ver sus categorias"
+        helpContent={helpContent.categories}
       >
         <Card className="text-center py-12">
           <p className="text-zinc-500 mb-4">
@@ -296,6 +299,7 @@ export function CategoriesPage() {
     <PageContainer
       title={`Categorias - ${selectedBranch?.name || ''}`}
       description={`Administra las categorias de ${selectedBranch?.name || 'la sucursal'}`}
+      helpContent={helpContent.categories}
       actions={
         <Button onClick={openCreateModal} leftIcon={<Plus className="w-4 h-4" />}>
           Nueva Categoria
@@ -336,6 +340,44 @@ export function CategoriesPage() {
         }
       >
         <div className="space-y-4">
+          <div className="flex items-center gap-2 mb-2">
+            <HelpButton
+              title="Formulario de Categoria"
+              size="sm"
+              content={
+                <div className="space-y-3">
+                  <p>
+                    <strong>Completa los siguientes campos</strong> para crear o editar una categoria:
+                  </p>
+                  <ul className="list-disc pl-5 space-y-2">
+                    <li>
+                      <strong>Nombre:</strong> Nombre descriptivo de la categoria (ej: Comidas, Bebidas, Postres). Es obligatorio.
+                    </li>
+                    <li>
+                      <strong>Icono:</strong> Un emoji o codigo de icono para representar visualmente la categoria (ej: 🍔, 🍺).
+                    </li>
+                    <li>
+                      <strong>Imagen:</strong> Sube una imagen representativa de la categoria. Se mostrara en el menu.
+                    </li>
+                    <li>
+                      <strong>Orden:</strong> Numero que define la posicion de la categoria en el menu. Menor numero = aparece primero.
+                    </li>
+                    <li>
+                      <strong>Categoria activa:</strong> Activa o desactiva la visibilidad de la categoria en el menu publico.
+                    </li>
+                  </ul>
+                  <div className="bg-zinc-800 p-3 rounded-lg mt-3">
+                    <p className="text-orange-400 font-medium text-sm">Consejo:</p>
+                    <p className="text-sm mt-1">
+                      Las categorias inactivas no se mostraran en el menu publico pero se mantendran en el sistema con todos sus productos.
+                    </p>
+                  </div>
+                </div>
+              }
+            />
+            <span className="text-sm text-zinc-400">Ayuda sobre el formulario</span>
+          </div>
+
           <Input
             label="Nombre"
             value={formData.name}

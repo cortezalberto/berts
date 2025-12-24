@@ -14,6 +14,7 @@ import {
   Pagination,
   ProductSelect,
   BranchCheckboxes,
+  HelpButton,
 } from '../components/ui'
 import { usePagination } from '../hooks/usePagination'
 import {
@@ -28,6 +29,7 @@ import {
 import { toast } from '../stores/toastStore'
 import { validatePromotion, type ValidationErrors } from '../utils/validation'
 import { handleError } from '../utils/logger'
+import { helpContent } from '../utils/helpContent'
 import type { Promotion, PromotionFormData, TableColumn } from '../types'
 
 const initialFormData: PromotionFormData = {
@@ -343,6 +345,7 @@ export function PromotionsPage() {
     <PageContainer
       title="Promociones"
       description="Administra las promociones y combos del menu"
+      helpContent={helpContent.promotions}
       actions={
         <Button onClick={openCreateModal} leftIcon={<Plus className="w-4 h-4" />}>
           Nueva Promocion
@@ -383,6 +386,56 @@ export function PromotionsPage() {
         }
       >
         <div className="space-y-4">
+          <div className="flex items-center gap-2 mb-2">
+            <HelpButton
+              title="Formulario de Promocion"
+              size="sm"
+              content={
+                <div className="space-y-3">
+                  <p>
+                    <strong>Completa los siguientes campos</strong> para crear o editar una promocion:
+                  </p>
+                  <ul className="list-disc pl-5 space-y-2">
+                    <li>
+                      <strong>Nombre:</strong> Nombre descriptivo de la promocion (ej: Combo Familiar, 2x1 Hamburguesas). Es obligatorio.
+                    </li>
+                    <li>
+                      <strong>Descripcion:</strong> Detalle de la promocion que veran los clientes.
+                    </li>
+                    <li>
+                      <strong>Precio:</strong> Precio del combo o promocion.
+                    </li>
+                    <li>
+                      <strong>Imagen:</strong> Foto para mostrar en el menu.
+                    </li>
+                    <li>
+                      <strong>Tipo de Promocion:</strong> Categoria de la promocion (Happy Hour, 2x1, etc.).
+                    </li>
+                    <li>
+                      <strong>Fechas:</strong> Periodo de vigencia de la promocion.
+                    </li>
+                    <li>
+                      <strong>Horarios:</strong> Horas del dia en que aplica (ej: Happy Hour 17:00-20:00).
+                    </li>
+                    <li>
+                      <strong>Productos:</strong> Selecciona los productos que forman parte del combo.
+                    </li>
+                    <li>
+                      <strong>Sucursales:</strong> Donde estara disponible la promocion.
+                    </li>
+                  </ul>
+                  <div className="bg-zinc-800 p-3 rounded-lg mt-3">
+                    <p className="text-orange-400 font-medium text-sm">Consejo:</p>
+                    <p className="text-sm mt-1">
+                      Las promociones solo se mostraran durante el periodo y horario configurados. Asegurate de que las fechas sean correctas.
+                    </p>
+                  </div>
+                </div>
+              }
+            />
+            <span className="text-sm text-zinc-400">Ayuda sobre el formulario</span>
+          </div>
+
           <Input
             label="Nombre"
             value={formData.name}

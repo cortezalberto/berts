@@ -170,7 +170,7 @@ export interface DashboardStats {
 // Table column definition for reusable table component
 export interface TableColumn<T> {
   key: keyof T | string
-  label: string
+  label: React.ReactNode
   render?: (item: T) => React.ReactNode
   sortable?: boolean
   width?: string

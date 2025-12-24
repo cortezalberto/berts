@@ -34,7 +34,7 @@ const bottomNavigation = [
 
 export function Sidebar() {
   const selectedBranchId = useBranchStore(selectSelectedBranchId)
-  const selectedBranch = useBranchStore(selectBranchById(selectedBranchId || ''))
+  const selectedBranch = useBranchStore(selectBranchById(selectedBranchId))
 
   return (
     <aside className="fixed left-0 top-0 h-screen w-64 bg-zinc-900 border-r border-zinc-800 flex flex-col">

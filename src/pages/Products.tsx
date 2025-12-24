@@ -17,6 +17,7 @@ import {
   AllergenSelect,
   Pagination,
   BranchPriceInput,
+  HelpButton,
 } from '../components/ui'
 import { usePagination } from '../hooks/usePagination'
 import { useCategoryStore, selectCategories } from '../stores/categoryStore'
@@ -32,6 +33,7 @@ import { toast } from '../stores/toastStore'
 import { validateProduct, type ValidationErrors, type BranchPriceErrors } from '../utils/validation'
 import { handleError } from '../utils/logger'
 import { HOME_CATEGORY_NAME } from '../utils/constants'
+import { helpContent } from '../utils/helpContent'
 import type { Product, ProductFormData, TableColumn } from '../types'
 
 const initialFormData: ProductFormData = {
@@ -64,7 +66,7 @@ export function ProductsPage() {
   const allergens = useAllergenStore(selectAllergens)
 
   const selectedBranchId = useBranchStore(selectSelectedBranchId)
-  const selectedBranch = useBranchStore(selectBranchById(selectedBranchId || ''))
+  const selectedBranch = useBranchStore(selectBranchById(selectedBranchId))
 
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
@@ -90,9 +92,9 @@ export function ProductsPage() {
     [branchCategories]
   )
 
-  // Filter categories (exclude Home category with id '0')
+  // Filter categories (Home categories already filtered by name in branchCategories)
   const selectableCategories = useMemo(
-    () => branchCategories.filter((c) => c.id !== '0'),
+    () => branchCategories,
     [branchCategories]
   )
 
@@ -307,8 +309,9 @@ export function ProductsPage() {
       label: 'Precio',
       width: 'w-36',
       render: (item) => {
+        const branchPrices = item.branch_prices ?? []
         // If not using branch prices or no branch prices set, show base price
-        if (!item.use_branch_prices || item.branch_prices.length === 0) {
+        if (!item.use_branch_prices || branchPrices.length === 0) {
           return (
             <span className="font-medium text-orange-500">
               {formatPrice(item.price)}
@@ -317,7 +320,7 @@ export function ProductsPage() {
         }
 
         // Get active branch prices
-        const activePrices = item.branch_prices
+        const activePrices = branchPrices
           .filter((bp) => bp.is_active)
           .map((bp) => bp.price)
 
@@ -457,6 +460,7 @@ export function ProductsPage() {
       <PageContainer
         title="Productos"
         description="Selecciona una sucursal para ver sus productos"
+        helpContent={helpContent.products}
       >
         <Card className="text-center py-12">
           <p className="text-zinc-500 mb-4">
@@ -472,6 +476,7 @@ export function ProductsPage() {
     <PageContainer
       title={`Productos - ${selectedBranch?.name || ''}`}
       description={`${branchProducts.length} productos en ${selectedBranch?.name || 'la sucursal'}`}
+      helpContent={helpContent.products}
       actions={
         <Button onClick={openCreateModal} leftIcon={<Plus className="w-4 h-4" />}>
           Nuevo Producto
@@ -559,6 +564,53 @@ export function ProductsPage() {
         }
       >
         <div className="space-y-4">
+          <div className="flex items-center gap-2 mb-2">
+            <HelpButton
+              title="Formulario de Producto"
+              size="sm"
+              content={
+                <div className="space-y-3">
+                  <p>
+                    <strong>Completa los siguientes campos</strong> para crear o editar un producto:
+                  </p>
+                  <ul className="list-disc pl-5 space-y-2">
+                    <li>
+                      <strong>Categoria y Subcategoria:</strong> Ubicacion del producto en el menu.
+                    </li>
+                    <li>
+                      <strong>Nombre:</strong> Nombre del producto (ej: Hamburguesa Clasica). Es obligatorio.
+                    </li>
+                    <li>
+                      <strong>Descripcion:</strong> Detalle del producto que veran los clientes.
+                    </li>
+                    <li>
+                      <strong>Precio:</strong> Precio base o precios diferenciados por sucursal.
+                    </li>
+                    <li>
+                      <strong>Badge:</strong> Etiqueta especial como "NUEVO", "VEGANO", "PROMO".
+                    </li>
+                    <li>
+                      <strong>Imagen:</strong> Foto del producto para el menu.
+                    </li>
+                    <li>
+                      <strong>Alergenos:</strong> Selecciona los alergenos que contiene el producto.
+                    </li>
+                    <li>
+                      <strong>Destacado/Popular:</strong> Marca productos especiales que apareceran resaltados.
+                    </li>
+                  </ul>
+                  <div className="bg-zinc-800 p-3 rounded-lg mt-3">
+                    <p className="text-orange-400 font-medium text-sm">Consejo:</p>
+                    <p className="text-sm mt-1">
+                      Una buena descripcion y foto aumentan las ventas. Incluye ingredientes principales y tamano de la porcion.
+                    </p>
+                  </div>
+                </div>
+              }
+            />
+            <span className="text-sm text-zinc-400">Ayuda sobre el formulario</span>
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <Select
               label="Categoria"

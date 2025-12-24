@@ -37,7 +37,7 @@ npm run preview   # Preview production build
 
 ### Directory Structure
 - `src/components/layout/` - Layout (with skip links), Sidebar, PageContainer
-- `src/components/ui/` - Reusable UI components (Button, Modal with focus trap, ErrorBoundary, etc.)
+- `src/components/ui/` - Reusable UI components (Button, Modal, HelpButton, ErrorBoundary, etc.)
 - `src/pages/` - Page components for each route
 - `src/stores/` - Zustand stores with persist middleware and selectors
 - `src/types/index.ts` - Centralized TypeScript interfaces
@@ -77,9 +77,10 @@ const filteredItems = useMemo(() =>
 Categories, subcategories, and products are scoped by branch. Use `selectedBranchId` from branchStore:
 ```typescript
 const selectedBranchId = useBranchStore(selectSelectedBranchId)
+const selectedBranch = useBranchStore(selectBranchById(selectedBranchId))  // Pass null directly, not ''
 const categories = useCategoryStore(selectCategories)
 
-// Filter by branch in useMemo
+// Filter by branch in useMemo - use HOME_CATEGORY_NAME, never id '0'
 const branchCategories = useMemo(() => {
   if (!selectedBranchId) return []
   return categories.filter(
@@ -88,15 +89,23 @@ const branchCategories = useMemo(() => {
 }, [categories, selectedBranchId])
 ```
 
+**Important:** The `selectBranchById` selector accepts `string | null`. Pass `selectedBranchId` directly without fallback to empty string.
+
 ### Cascade Delete Pattern
-When deleting a branch, cascade delete all related data:
+When deleting a branch, validate existence first and cascade delete all related data:
 ```typescript
 // In handleDelete for branches:
+const branchExists = branches.some((b) => b.id === selectedBranch.id)
+if (!branchExists) return  // Validate before cascade
+
 const branchCategories = getByBranch(selectedBranch.id)
 const categoryIds = branchCategories.map((c) => c.id)
-deleteByCategories(categoryIds)           // Delete products
-deleteByCategories(categoryIds)           // Delete subcategories
+if (categoryIds.length > 0) {
+  deleteByProductCategories(categoryIds)  // Delete products
+  deleteByCategories(categoryIds)         // Delete subcategories
+}
 deleteByBranchCategory(selectedBranch.id) // Delete categories
+removeBranchFromPromotions(selectedBranch.id) // Remove from promotions (deletes if empty)
 deleteBranch(selectedBranch.id)           // Delete branch
 ```
 
@@ -104,6 +113,12 @@ When deleting allergens, clean orphan references:
 ```typescript
 removeAllergenFromProducts(allergenId)  // Clean allergen_ids arrays
 deleteAllergen(allergenId)
+```
+
+When deleting promotion types, promotions using that type are deleted (not just cleared):
+```typescript
+clearPromotionType(typeId)  // Deletes all promotions with this type
+deletePromotionType(typeId)
 ```
 
 ### Constants and Configuration
@@ -177,6 +192,14 @@ if (!validation.isValid) {
 }
 ```
 
+**Important:** Always use null-safe access for `branch_prices` in render functions:
+```typescript
+const branchPrices = item.branch_prices ?? []
+if (!item.use_branch_prices || branchPrices.length === 0) {
+  // Show base price
+}
+```
+
 ### Master-Detail Relationships
 Products have a many-to-many relationship with Allergens via `allergen_ids: string[]`. Use the `AllergenSelect` component for multi-select in forms:
 ```typescript
@@ -222,6 +245,48 @@ Note: `branch_ids` always contains explicit IDs. All branches selected by defaul
 - Orange-500 as primary accent color
 - Custom animations in index.css (fade-in, zoom-in-95, slide-in-from-right)
 
+### Help System
+Each page includes a centered red help button (`HelpButton`) that opens a modal with detailed page functionality:
+```typescript
+import { helpContent } from '../utils/helpContent'
+
+<PageContainer
+  title="Productos"
+  description="..."
+  helpContent={helpContent.products}  // ReactNode with Spanish help text
+>
+```
+
+Help content is centralized in `src/utils/helpContent.tsx` with entries for: dashboard, restaurant, branches, categories, subcategories, products, prices, allergens, promotionTypes, promotions, settings.
+
+**Form Modal Help:** Each create/edit modal includes a small HelpButton (`size="sm"`) at the top of the form that explains all fields:
+```typescript
+<Modal isOpen={isModalOpen} onClose={...} title="..." footer={...}>
+  <div className="space-y-4">
+    <div className="flex items-center gap-2 mb-2">
+      <HelpButton
+        title="Formulario de Categoria"
+        size="sm"
+        content={
+          <div className="space-y-3">
+            <p><strong>Completa los siguientes campos</strong>...</p>
+            <ul className="list-disc pl-5 space-y-2">
+              <li><strong>Nombre:</strong> ...</li>
+            </ul>
+            <div className="bg-zinc-800 p-3 rounded-lg mt-3">
+              <p className="text-orange-400 font-medium text-sm">Consejo:</p>
+              <p className="text-sm mt-1">...</p>
+            </div>
+          </div>
+        }
+      />
+      <span className="text-sm text-zinc-400">Ayuda sobre el formulario</span>
+    </div>
+    {/* Form fields */}
+  </div>
+</Modal>
+```
+
 ### Accessibility
 - Modal component includes focus trap via `useFocusTrap` hook
 - Skip link in Layout for keyboard navigation
@@ -230,6 +295,7 @@ Note: `branch_ids` always contains explicit IDs. All branches selected by defaul
 - Table component supports keyboard navigation (Enter/Space) for clickable rows and requires `ariaLabel` prop
 - Loading states include `role="status"` and sr-only text
 - Icons use `aria-hidden="true"` when decorative, `aria-label` when meaningful
+- HelpButton provides contextual help for each page
 
 ### Store Migrations
 When modifying data structure, increment version in `STORE_VERSIONS` and add migrate function:

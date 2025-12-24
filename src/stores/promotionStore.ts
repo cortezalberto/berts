@@ -96,18 +96,20 @@ export const usePromotionStore = create<PromotionState>()(
 
       removeBranchFromPromotions: (branchId) =>
         set((state) => ({
-          promotions: state.promotions.map((promo) => ({
-            ...promo,
-            branch_ids: promo.branch_ids.filter((id) => id !== branchId),
-          })),
+          // Remove branch from promotions, delete promotion if no branches remain
+          promotions: state.promotions
+            .map((promo) => ({
+              ...promo,
+              branch_ids: promo.branch_ids.filter((id) => id !== branchId),
+            }))
+            .filter((promo) => promo.branch_ids.length > 0),
         })),
 
       clearPromotionType: (promotionTypeId) =>
         set((state) => ({
-          promotions: state.promotions.map((promo) =>
-            promo.promotion_type_id === promotionTypeId
-              ? { ...promo, promotion_type_id: '' }
-              : promo
+          // Delete promotions that use this promotion type (they become invalid)
+          promotions: state.promotions.filter(
+            (promo) => promo.promotion_type_id !== promotionTypeId
           ),
         })),
 

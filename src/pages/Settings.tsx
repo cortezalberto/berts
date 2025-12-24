@@ -15,6 +15,7 @@ import { useRestaurantStore, selectRestaurant } from '../stores/restaurantStore'
 import { toast } from '../stores/toastStore'
 import { STORAGE_KEYS } from '../utils/constants'
 import { handleError } from '../utils/logger'
+import { helpContent } from '../utils/helpContent'
 import { useState } from 'react'
 
 function clearAllStorageData(): void {
@@ -128,6 +129,7 @@ export function SettingsPage() {
     <PageContainer
       title="Configuracion"
       description="Administra la configuracion del dashboard"
+      helpContent={helpContent.settings}
     >
       {/* Hidden elements for file operations */}
       <input

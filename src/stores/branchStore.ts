@@ -138,5 +138,5 @@ export const useBranchStore = create<BranchState>()(
 // Selectors
 export const selectBranches = (state: BranchState) => state.branches
 export const selectSelectedBranchId = (state: BranchState) => state.selectedBranchId
-export const selectBranchById = (id: string) => (state: BranchState) =>
-  state.branches.find((b) => b.id === id)
+export const selectBranchById = (id: string | null) => (state: BranchState) =>
+  id ? state.branches.find((b) => b.id === id) : undefined

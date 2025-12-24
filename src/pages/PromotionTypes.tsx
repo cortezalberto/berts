@@ -11,6 +11,7 @@ import {
   ConfirmDialog,
   Badge,
   Pagination,
+  HelpButton,
 } from '../components/ui'
 import { usePagination } from '../hooks/usePagination'
 import {
@@ -21,6 +22,7 @@ import { usePromotionStore } from '../stores/promotionStore'
 import { toast } from '../stores/toastStore'
 import { validatePromotionType, type ValidationErrors } from '../utils/validation'
 import { handleError } from '../utils/logger'
+import { helpContent } from '../utils/helpContent'
 import type { PromotionType, PromotionTypeFormData, TableColumn } from '../types'
 
 const initialFormData: PromotionTypeFormData = {
@@ -203,6 +205,7 @@ export function PromotionTypesPage() {
     <PageContainer
       title="Tipos de Promocion"
       description="Administra los tipos de promociones disponibles"
+      helpContent={helpContent.promotionTypes}
       actions={
         <Button onClick={openCreateModal} leftIcon={<Plus className="w-4 h-4" />}>
           Nuevo Tipo
@@ -242,6 +245,41 @@ export function PromotionTypesPage() {
         }
       >
         <div className="space-y-4">
+          <div className="flex items-center gap-2 mb-2">
+            <HelpButton
+              title="Formulario de Tipo de Promocion"
+              size="sm"
+              content={
+                <div className="space-y-3">
+                  <p>
+                    <strong>Completa los siguientes campos</strong> para crear o editar un tipo de promocion:
+                  </p>
+                  <ul className="list-disc pl-5 space-y-2">
+                    <li>
+                      <strong>Nombre:</strong> Nombre del tipo de promocion (ej: Happy Hour, 2x1, Combo Familiar). Es obligatorio.
+                    </li>
+                    <li>
+                      <strong>Descripcion:</strong> Breve explicacion del tipo de promocion.
+                    </li>
+                    <li>
+                      <strong>Icono:</strong> Un emoji representativo (ej: 🍺, 🎉, 💰). Se mostrara junto al nombre.
+                    </li>
+                    <li>
+                      <strong>Tipo activo:</strong> Activa o desactiva la disponibilidad del tipo para crear nuevas promociones.
+                    </li>
+                  </ul>
+                  <div className="bg-zinc-800 p-3 rounded-lg mt-3">
+                    <p className="text-orange-400 font-medium text-sm">Consejo:</p>
+                    <p className="text-sm mt-1">
+                      Los tipos de promocion te ayudan a organizar y filtrar tus ofertas. Por ejemplo: Happy Hour para descuentos por horario, 2x1 para ofertas de cantidad.
+                    </p>
+                  </div>
+                </div>
+              }
+            />
+            <span className="text-sm text-zinc-400">Ayuda sobre el formulario</span>
+          </div>
+
           <Input
             label="Nombre"
             value={formData.name}

@@ -8,6 +8,7 @@ import { useCategoryStore, selectCategories } from '../stores/categoryStore'
 import { useProductStore, selectProducts } from '../stores/productStore'
 import { useRestaurantStore, selectRestaurant } from '../stores/restaurantStore'
 import { HOME_CATEGORY_NAME } from '../utils/constants'
+import { helpContent } from '../utils/helpContent'
 
 interface BranchCardProps {
   branch: {
@@ -143,6 +144,7 @@ export function DashboardPage() {
     <PageContainer
       title={`Bienvenido${restaurant ? `, ${restaurant.name}` : ''}`}
       description="Selecciona una sucursal para administrar su menu"
+      helpContent={helpContent.dashboard}
     >
       {/* Branch Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

@@ -22,25 +22,21 @@ export function usePagination<T>(
   options: UsePaginationOptions = {}
 ): UsePaginationResult<T> {
   const { itemsPerPage = 10 } = options
-  const [currentPage, setCurrentPage] = useState(1)
+  const [currentPage, setCurrentPageInternal] = useState(1)
 
   const totalItems = items.length
   const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage))
 
-  // Reset to page 1 if current page exceeds total pages (e.g., after filtering)
-  const safePage = useMemo(() => {
-    if (currentPage > totalPages) {
-      return 1
-    }
-    return currentPage
-  }, [currentPage, totalPages])
+  // Calculate safe page (auto-correct if current exceeds total after filtering)
+  const safePage = currentPage > totalPages ? 1 : currentPage
 
-  // Update current page if it became invalid
-  useMemo(() => {
-    if (currentPage !== safePage) {
-      setCurrentPage(safePage)
-    }
-  }, [currentPage, safePage])
+  // Wrap setCurrentPage to clamp values within valid range
+  const setCurrentPage = useCallback(
+    (page: number) => {
+      setCurrentPageInternal(Math.max(1, Math.min(page, totalPages)))
+    },
+    [totalPages]
+  )
 
   const paginatedItems = useMemo(() => {
     const startIndex = (safePage - 1) * itemsPerPage
@@ -48,13 +44,13 @@ export function usePagination<T>(
     return items.slice(startIndex, endIndex)
   }, [items, safePage, itemsPerPage])
 
-  const goToFirstPage = useCallback(() => setCurrentPage(1), [])
-  const goToLastPage = useCallback(() => setCurrentPage(totalPages), [totalPages])
+  const goToFirstPage = useCallback(() => setCurrentPage(1), [setCurrentPage])
+  const goToLastPage = useCallback(() => setCurrentPage(totalPages), [setCurrentPage, totalPages])
   const goToNextPage = useCallback(() => {
-    setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+    setCurrentPageInternal((prev) => Math.min(prev + 1, totalPages))
   }, [totalPages])
   const goToPreviousPage = useCallback(() => {
-    setCurrentPage((prev) => Math.max(prev - 1, 1))
+    setCurrentPageInternal((prev) => Math.max(prev - 1, 1))
   }, [])
 
   return {

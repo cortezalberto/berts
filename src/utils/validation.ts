@@ -123,7 +123,8 @@ export function validateProduct(data: ProductFormData): ProductValidationResult 
   // Price validation depends on mode
   if (data.use_branch_prices) {
     // Branch prices mode: validate individual branch prices
-    const activeBranchPrices = data.branch_prices.filter(bp => bp.is_active)
+    const branchPrices = data.branch_prices ?? []
+    const activeBranchPrices = branchPrices.filter(bp => bp.is_active)
 
     if (activeBranchPrices.length === 0) {
       errors.branch_prices = 'Debe seleccionar al menos una sucursal'

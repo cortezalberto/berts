@@ -6,6 +6,7 @@ import { useRestaurantStore } from '../stores/restaurantStore'
 import { toast } from '../stores/toastStore'
 import { validateRestaurant, type ValidationErrors } from '../utils/validation'
 import { handleError } from '../utils/logger'
+import { helpContent } from '../utils/helpContent'
 import type { RestaurantFormData } from '../types'
 
 export function RestaurantPage() {
@@ -99,6 +100,7 @@ export function RestaurantPage() {
     <PageContainer
       title="Restaurante"
       description="Configura la informacion de tu restaurante"
+      helpContent={helpContent.restaurant}
     >
       <form onSubmit={handleSubmit} className="max-w-4xl">
         <Card className="mb-6">

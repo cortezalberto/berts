@@ -1,14 +1,16 @@
 import { Bell, Search, User } from 'lucide-react'
+import { HelpButton } from '../ui'
 
 interface HeaderProps {
   title: string
   description?: string
   actions?: React.ReactNode
+  helpContent?: React.ReactNode
 }
 
-export function Header({ title, description, actions }: HeaderProps) {
+export function Header({ title, description, actions, helpContent }: HeaderProps) {
   return (
-    <header className="h-16 bg-zinc-900 border-b border-zinc-800 flex items-center justify-between px-6">
+    <header className="h-16 bg-zinc-900 border-b border-zinc-800 flex items-center px-6 relative">
       <div>
         <h1 className="text-xl font-semibold text-white">{title}</h1>
         {description && (
@@ -16,7 +18,14 @@ export function Header({ title, description, actions }: HeaderProps) {
         )}
       </div>
 
-      <div className="flex items-center gap-4">
+      {/* Help Button - Centered with offset */}
+      {helpContent && (
+        <div className="absolute left-1/2 transform -translate-x-1/2" style={{ marginLeft: '-40px' }}>
+          <HelpButton title={title} content={helpContent} />
+        </div>
+      )}
+
+      <div className="flex items-center gap-4 ml-auto">
         {actions}
 
         {/* Search */}
