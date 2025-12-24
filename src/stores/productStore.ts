@@ -14,11 +14,13 @@ interface ProductState {
   getBySubcategory: (subcategoryId: string) => Product[]
   deleteByCategory: (categoryId: string) => void
   deleteBySubcategory: (subcategoryId: string) => void
+  deleteByCategories: (categoryIds: string[]) => void
+  removeAllergenFromProducts: (allergenId: string) => void
 }
 
 const generateId = () => crypto.randomUUID()
 
-// Initial mock products with allergen_ids
+// Initial mock products with allergen_ids - Branch 1 (Barijho Centro)
 const initialProducts: Product[] = [
   {
     id: '1',
@@ -26,12 +28,12 @@ const initialProducts: Product[] = [
     description: 'Cebolla con queso fundido',
     price: 12.5,
     image: 'https://images.unsplash.com/photo-1550547660-d9450f859349?w=400&h=400&fit=crop',
-    category_id: '1',
+    category_id: 'b1-cat-1',
     subcategory_id: 'sub-5',
     featured: true,
     popular: true,
     badge: 'TEX MEX',
-    allergen_ids: ['alg-7', 'alg-2'], // Soja, Lacteos
+    allergen_ids: ['alg-7', 'alg-2'],
     is_active: true,
   },
   {
@@ -40,11 +42,11 @@ const initialProducts: Product[] = [
     description: 'Parmesano con hierbas frescas',
     price: 18.0,
     image: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=400&h=400&fit=crop',
-    category_id: '1',
+    category_id: 'b1-cat-1',
     subcategory_id: 'sub-2',
     featured: true,
     popular: true,
-    allergen_ids: ['alg-2'], // Lacteos
+    allergen_ids: ['alg-2'],
     is_active: true,
   },
   {
@@ -53,11 +55,11 @@ const initialProducts: Product[] = [
     description: 'Medallon de carne con salsa especial',
     price: 15.0,
     image: 'https://images.unsplash.com/photo-1586190848861-99aa4a171e90?w=400&h=400&fit=crop',
-    category_id: '1',
+    category_id: 'b1-cat-1',
     subcategory_id: 'sub-1',
     featured: true,
     popular: true,
-    allergen_ids: ['alg-1', 'alg-3', 'alg-10'], // Gluten, Huevos, Sesamo
+    allergen_ids: ['alg-1', 'alg-3', 'alg-10'],
     is_active: true,
   },
   {
@@ -66,12 +68,12 @@ const initialProducts: Product[] = [
     description: 'Vegetales frescos y quinoa',
     price: 14.0,
     image: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=400&h=400&fit=crop',
-    category_id: '1',
+    category_id: 'b1-cat-1',
     subcategory_id: 'sub-3',
     featured: false,
     popular: true,
     badge: 'VEGANO',
-    allergen_ids: [], // Sin alergenos
+    allergen_ids: [],
     is_active: true,
   },
   {
@@ -80,11 +82,11 @@ const initialProducts: Product[] = [
     description: 'Con salsa de limon y manteca',
     price: 24.0,
     image: 'https://images.unsplash.com/photo-1467003909585-2f8a72700288?w=400&h=400&fit=crop',
-    category_id: '1',
+    category_id: 'b1-cat-1',
     subcategory_id: 'sub-4',
     featured: true,
     popular: false,
-    allergen_ids: ['alg-4', 'alg-2'], // Pescado, Lacteos
+    allergen_ids: ['alg-4', 'alg-2'],
     is_active: true,
   },
   {
@@ -93,11 +95,11 @@ const initialProducts: Product[] = [
     description: 'Pasta cremosa con panceta',
     price: 16.0,
     image: 'https://images.unsplash.com/photo-1612874742237-6526221588e3?w=400&h=400&fit=crop',
-    category_id: '1',
+    category_id: 'b1-cat-1',
     subcategory_id: 'sub-2',
     featured: false,
     popular: true,
-    allergen_ids: ['alg-1', 'alg-2', 'alg-3'], // Gluten, Lacteos, Huevos
+    allergen_ids: ['alg-1', 'alg-2', 'alg-3'],
     is_active: true,
   },
   {
@@ -106,11 +108,11 @@ const initialProducts: Product[] = [
     description: 'Seleccion de IPA local',
     price: 7.0,
     image: 'https://images.unsplash.com/photo-1535958636474-b021ee887b13?w=400&h=400&fit=crop',
-    category_id: '2',
+    category_id: 'b1-cat-2',
     subcategory_id: 'sub-6',
     featured: false,
     popular: true,
-    allergen_ids: ['alg-1'], // Gluten
+    allergen_ids: ['alg-1'],
     is_active: true,
   },
   {
@@ -119,7 +121,7 @@ const initialProducts: Product[] = [
     description: 'Casera con menta',
     price: 5.0,
     image: 'https://images.unsplash.com/photo-1621263764928-df1444c5e859?w=400&h=400&fit=crop',
-    category_id: '2',
+    category_id: 'b1-cat-2',
     subcategory_id: 'sub-8',
     featured: false,
     popular: true,
@@ -132,11 +134,11 @@ const initialProducts: Product[] = [
     description: 'Chocolate negro intenso',
     price: 9.0,
     image: 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=400&h=400&fit=crop',
-    category_id: '3',
+    category_id: 'b1-cat-3',
     subcategory_id: 'sub-10',
     featured: true,
     popular: true,
-    allergen_ids: ['alg-1', 'alg-2', 'alg-3'], // Gluten, Lacteos, Huevos
+    allergen_ids: ['alg-1', 'alg-2', 'alg-3'],
     is_active: true,
   },
   {
@@ -145,11 +147,11 @@ const initialProducts: Product[] = [
     description: 'Seleccion de tres bochas',
     price: 7.0,
     image: 'https://images.unsplash.com/photo-1497034825429-c343d7c6a68f?w=400&h=400&fit=crop',
-    category_id: '3',
+    category_id: 'b1-cat-3',
     subcategory_id: 'sub-11',
     featured: false,
     popular: true,
-    allergen_ids: ['alg-2'], // Lacteos
+    allergen_ids: ['alg-2'],
     is_active: true,
   },
   {
@@ -158,12 +160,12 @@ const initialProducts: Product[] = [
     description: 'Con bacon y salsa barbacoa',
     price: 17.0,
     image: 'https://images.unsplash.com/photo-1553979459-d2229ba7433b?w=400&h=400&fit=crop',
-    category_id: '1',
+    category_id: 'b1-cat-1',
     subcategory_id: 'sub-1',
     featured: false,
     popular: true,
     badge: 'BBQ',
-    allergen_ids: ['alg-1', 'alg-3', 'alg-9'], // Gluten, Huevos, Mostaza
+    allergen_ids: ['alg-1', 'alg-3', 'alg-9'],
     is_active: true,
   },
   {
@@ -172,11 +174,11 @@ const initialProducts: Product[] = [
     description: 'Ron, menta, lima y soda',
     price: 10.0,
     image: 'https://images.unsplash.com/photo-1551024709-8f23befc6f87?w=400&h=400&fit=crop',
-    category_id: '2',
+    category_id: 'b1-cat-2',
     subcategory_id: 'sub-7',
     featured: true,
     popular: true,
-    allergen_ids: ['alg-11'], // Sulfitos
+    allergen_ids: ['alg-11'],
     is_active: true,
   },
   {
@@ -185,11 +187,11 @@ const initialProducts: Product[] = [
     description: 'Malbec argentino',
     price: 15.0,
     image: 'https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=400&h=400&fit=crop',
-    category_id: '2',
+    category_id: 'b1-cat-2',
     subcategory_id: 'sub-9',
     featured: false,
     popular: false,
-    allergen_ids: ['alg-11'], // Sulfitos
+    allergen_ids: ['alg-11'],
     is_active: true,
   },
   {
@@ -198,12 +200,132 @@ const initialProducts: Product[] = [
     description: 'Frutas frescas de estacion',
     price: 8.0,
     image: 'https://images.unsplash.com/photo-1490474418585-ba9bad8fd0ea?w=400&h=400&fit=crop',
-    category_id: '3',
+    category_id: 'b1-cat-3',
     subcategory_id: 'sub-12',
     featured: false,
     popular: true,
     badge: 'SALUDABLE',
     allergen_ids: [],
+    is_active: true,
+  },
+  // Branch 2 - Barijho Norte
+  {
+    id: 'b2-prod-1',
+    name: 'Pizza Margherita',
+    description: 'Tomate, mozzarella y albahaca',
+    price: 14.0,
+    image: 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=400&h=400&fit=crop',
+    category_id: 'b2-cat-1',
+    subcategory_id: 'b2-sub-1',
+    featured: true,
+    popular: true,
+    allergen_ids: ['alg-1', 'alg-2'],
+    is_active: true,
+  },
+  {
+    id: 'b2-prod-2',
+    name: 'Empanada de Carne',
+    description: 'Carne cortada a cuchillo',
+    price: 3.5,
+    image: 'https://images.unsplash.com/photo-1604467794349-0b74285de7e7?w=400&h=400&fit=crop',
+    category_id: 'b2-cat-1',
+    subcategory_id: 'b2-sub-2',
+    featured: false,
+    popular: true,
+    allergen_ids: ['alg-1'],
+    is_active: true,
+  },
+  {
+    id: 'b2-prod-3',
+    name: 'Licuado de Banana',
+    description: 'Con leche y miel',
+    price: 6.0,
+    image: 'https://images.unsplash.com/photo-1553530666-ba11a90c6f0d?w=400&h=400&fit=crop',
+    category_id: 'b2-cat-2',
+    subcategory_id: 'b2-sub-3',
+    featured: false,
+    popular: true,
+    allergen_ids: ['alg-2'],
+    is_active: true,
+  },
+  // Branch 3 - Barijho Sur
+  {
+    id: 'b3-prod-1',
+    name: 'Asado Completo',
+    description: 'Vacio, chorizo y morcilla',
+    price: 28.0,
+    image: 'https://images.unsplash.com/photo-1544025162-d76694265947?w=400&h=400&fit=crop',
+    category_id: 'b3-cat-1',
+    subcategory_id: 'b3-sub-1',
+    featured: true,
+    popular: true,
+    allergen_ids: [],
+    is_active: true,
+  },
+  {
+    id: 'b3-prod-2',
+    name: 'Entraña a la Brasa',
+    description: 'Con chimichurri casero',
+    price: 22.0,
+    image: 'https://images.unsplash.com/photo-1558030006-450675393462?w=400&h=400&fit=crop',
+    category_id: 'b3-cat-1',
+    subcategory_id: 'b3-sub-1',
+    featured: true,
+    popular: true,
+    allergen_ids: [],
+    is_active: true,
+  },
+  // Branch 4 - Barijho Este
+  {
+    id: 'b4-prod-1',
+    name: 'Sushi Variado',
+    description: 'Seleccion de 12 piezas',
+    price: 26.0,
+    image: 'https://images.unsplash.com/photo-1579871494447-9811cf80d66c?w=400&h=400&fit=crop',
+    category_id: 'b4-cat-1',
+    subcategory_id: 'b4-sub-1',
+    featured: true,
+    popular: true,
+    allergen_ids: ['alg-4', 'alg-7', 'alg-10'],
+    is_active: true,
+  },
+  {
+    id: 'b4-prod-2',
+    name: 'Ramen Tonkotsu',
+    description: 'Caldo de cerdo con huevo',
+    price: 18.0,
+    image: 'https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=400&h=400&fit=crop',
+    category_id: 'b4-cat-1',
+    subcategory_id: 'b4-sub-2',
+    featured: true,
+    popular: true,
+    allergen_ids: ['alg-1', 'alg-3', 'alg-7'],
+    is_active: true,
+  },
+  {
+    id: 'b4-prod-3',
+    name: 'Sake Premium',
+    description: 'Sake japones servido frio',
+    price: 12.0,
+    image: 'https://images.unsplash.com/photo-1516100882582-96c3a05fe590?w=400&h=400&fit=crop',
+    category_id: 'b4-cat-2',
+    subcategory_id: 'b4-sub-3',
+    featured: false,
+    popular: true,
+    allergen_ids: [],
+    is_active: true,
+  },
+  {
+    id: 'b4-prod-4',
+    name: 'Mochi Helado',
+    description: 'Variedad de sabores',
+    price: 8.0,
+    image: 'https://images.unsplash.com/photo-1631206753348-db44968fd440?w=400&h=400&fit=crop',
+    category_id: 'b4-cat-3',
+    subcategory_id: 'b4-sub-4',
+    featured: false,
+    popular: true,
+    allergen_ids: ['alg-2'],
     is_active: true,
   },
 ]
@@ -263,19 +385,32 @@ export const useProductStore = create<ProductState>()(
             (prod) => prod.subcategory_id !== subcategoryId
           ),
         })),
+
+      deleteByCategories: (categoryIds) => {
+        const categoryIdSet = new Set(categoryIds)
+        set((state) => ({
+          products: state.products.filter(
+            (prod) => !categoryIdSet.has(prod.category_id)
+          ),
+        }))
+      },
+
+      removeAllergenFromProducts: (allergenId) =>
+        set((state) => ({
+          products: state.products.map((prod) => ({
+            ...prod,
+            allergen_ids: prod.allergen_ids.filter((id) => id !== allergenId),
+          })),
+        })),
     }),
     {
       name: STORAGE_KEYS.PRODUCTS,
       version: STORE_VERSIONS.PRODUCTS,
-      // Migration: ensure allergen_ids exists on all products
       migrate: (persistedState, version) => {
         const state = persistedState as { products: Product[] }
-        if (version < 2) {
-          // Add allergen_ids to products that don't have it
-          state.products = state.products.map((p) => ({
-            ...p,
-            allergen_ids: p.allergen_ids ?? [],
-          }))
+        // Version 4: Reset a datos iniciales con category_ids correctos
+        if (version < 4) {
+          state.products = initialProducts
         }
         return state
       },

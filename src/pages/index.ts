@@ -1,5 +1,6 @@
 export { DashboardPage } from './Dashboard'
 export { RestaurantPage } from './Restaurant'
+export { BranchesPage } from './Branches'
 export { CategoriesPage } from './Categories'
 export { SubcategoriesPage } from './Subcategories'
 export { ProductsPage } from './Products'

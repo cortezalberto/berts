@@ -14,6 +14,31 @@ export interface Restaurant {
   updated_at?: string
 }
 
+// Branch types (sucursales)
+export interface Branch {
+  id: string
+  name: string
+  restaurant_id: string
+  address?: string
+  phone?: string
+  email?: string
+  image?: string
+  is_active?: boolean
+  order: number
+  created_at?: string
+  updated_at?: string
+}
+
+export interface BranchFormData {
+  name: string
+  address?: string
+  phone?: string
+  email?: string
+  image?: string
+  is_active: boolean
+  order: number
+}
+
 // Category types
 export interface Category {
   id: string
@@ -21,7 +46,7 @@ export interface Category {
   icon?: string
   image?: string
   order: number
-  restaurant_id?: string
+  branch_id: string
   is_active?: boolean
   created_at?: string
   updated_at?: string
@@ -32,7 +57,7 @@ export interface Subcategory {
   id: string
   name: string
   category_id: string
-  image: string
+  image?: string
   order: number
   is_active?: boolean
   created_at?: string
@@ -68,7 +93,7 @@ export interface Product {
   subcategory_id: string
   featured: boolean
   popular: boolean
-  badge?: string | null
+  badge?: string
   allergen_ids: string[]
   is_active?: boolean
   stock?: number
@@ -82,13 +107,14 @@ export interface CategoryFormData {
   icon?: string
   image?: string
   order: number
+  branch_id: string
   is_active: boolean
 }
 
 export interface SubcategoryFormData {
   name: string
   category_id: string
-  image: string
+  image?: string
   order: number
   is_active: boolean
 }

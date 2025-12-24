@@ -10,7 +10,9 @@ import {
   Toggle,
   ConfirmDialog,
   Badge,
+  Pagination,
 } from '../components/ui'
+import { usePagination } from '../hooks/usePagination'
 import {
   useAllergenStore,
   selectAllergens,
@@ -35,6 +37,7 @@ export function AllergensPage() {
   const deleteAllergen = useAllergenStore((s) => s.deleteAllergen)
 
   const products = useProductStore(selectProducts)
+  const removeAllergenFromProducts = useProductStore((s) => s.removeAllergenFromProducts)
 
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
@@ -47,6 +50,15 @@ export function AllergensPage() {
     () => [...allergens].sort((a, b) => a.name.localeCompare(b.name)),
     [allergens]
   )
+
+  const {
+    paginatedItems: paginatedAllergens,
+    currentPage,
+    totalPages,
+    totalItems,
+    itemsPerPage,
+    setCurrentPage,
+  } = usePagination(sortedAllergens)
 
   const getProductCount = useCallback(
     (allergenId: string) => {
@@ -110,8 +122,10 @@ export function AllergensPage() {
     try {
       const productCount = getProductCount(selectedAllergen.id)
       if (productCount > 0) {
+        // Limpiar referencias huerfanas de los productos
+        removeAllergenFromProducts(selectedAllergen.id)
         toast.warning(
-          `Este alergeno esta vinculado a ${productCount} producto(s). Se eliminara la referencia.`
+          `Este alergeno estaba vinculado a ${productCount} producto(s). Se elimino la referencia.`
         )
       }
 
@@ -122,7 +136,7 @@ export function AllergensPage() {
       const message = handleError(error, 'AllergensPage.handleDelete')
       toast.error(`Error al eliminar el alergeno: ${message}`)
     }
-  }, [selectedAllergen, deleteAllergen, getProductCount])
+  }, [selectedAllergen, deleteAllergen, getProductCount, removeAllergenFromProducts])
 
   const columns: TableColumn<Allergen>[] = useMemo(
     () => [
@@ -222,9 +236,17 @@ export function AllergensPage() {
     >
       <Card padding="none">
         <Table
-          data={sortedAllergens}
+          data={paginatedAllergens}
           columns={columns}
           emptyMessage="No hay alergenos. Crea uno para comenzar."
+          ariaLabel="Lista de alergenos"
+        />
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={totalItems}
+          itemsPerPage={itemsPerPage}
+          onPageChange={setCurrentPage}
         />
       </Card>
 

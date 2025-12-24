@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback } from 'react'
-import { Plus, Pencil, Trash2, Filter, Star, TrendingUp, AlertTriangle } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { Plus, Pencil, Trash2, Filter, Star, TrendingUp } from 'lucide-react'
 import { PageContainer } from '../components/layout'
 import {
   Card,
@@ -14,14 +15,22 @@ import {
   ConfirmDialog,
   Badge,
   AllergenSelect,
+  Pagination,
 } from '../components/ui'
+import { usePagination } from '../hooks/usePagination'
 import { useCategoryStore, selectCategories } from '../stores/categoryStore'
 import { useSubcategoryStore, selectSubcategories } from '../stores/subcategoryStore'
 import { useProductStore, selectProducts } from '../stores/productStore'
 import { useAllergenStore, selectAllergens } from '../stores/allergenStore'
+import {
+  useBranchStore,
+  selectSelectedBranchId,
+  selectBranchById,
+} from '../stores/branchStore'
 import { toast } from '../stores/toastStore'
 import { validateProduct, type ValidationErrors } from '../utils/validation'
 import { handleError } from '../utils/logger'
+import { HOME_CATEGORY_NAME } from '../utils/constants'
 import type { Product, ProductFormData, TableColumn } from '../types'
 
 const initialFormData: ProductFormData = {
@@ -40,6 +49,8 @@ const initialFormData: ProductFormData = {
 }
 
 export function ProductsPage() {
+  const navigate = useNavigate()
+
   const categories = useCategoryStore(selectCategories)
   const subcategories = useSubcategoryStore(selectSubcategories)
   const getByCategory = useSubcategoryStore((s) => s.getByCategory)
@@ -48,6 +59,9 @@ export function ProductsPage() {
   const updateProduct = useProductStore((s) => s.updateProduct)
   const deleteProduct = useProductStore((s) => s.deleteProduct)
   const allergens = useAllergenStore(selectAllergens)
+
+  const selectedBranchId = useBranchStore(selectSelectedBranchId)
+  const selectedBranch = useBranchStore(selectBranchById(selectedBranchId || ''))
 
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
@@ -58,10 +72,24 @@ export function ProductsPage() {
   const [filterCategory, setFilterCategory] = useState<string>('')
   const [filterSubcategory, setFilterSubcategory] = useState<string>('')
 
+  // Filtrar categorias por sucursal seleccionada
+  const branchCategories = useMemo(() => {
+    if (!selectedBranchId) return []
+    return categories.filter(
+      (c) => c.branch_id === selectedBranchId && c.name !== HOME_CATEGORY_NAME
+    )
+  }, [categories, selectedBranchId])
+
+  // Obtener IDs de categorias de esta sucursal
+  const branchCategoryIds = useMemo(
+    () => new Set(branchCategories.map((c) => c.id)),
+    [branchCategories]
+  )
+
   // Filter categories (exclude Home category with id '0')
   const selectableCategories = useMemo(
-    () => categories.filter((c) => c.id !== '0'),
-    [categories]
+    () => branchCategories.filter((c) => c.id !== '0'),
+    [branchCategories]
   )
 
   const categoryOptions = useMemo(
@@ -94,7 +122,8 @@ export function ProductsPage() {
   }, [filterCategory, getByCategory])
 
   const filteredProducts = useMemo(() => {
-    let result = [...products]
+    // Filtrar por sucursal primero
+    let result = products.filter((p) => branchCategoryIds.has(p.category_id))
     if (filterCategory) {
       result = result.filter((p) => p.category_id === filterCategory)
     }
@@ -102,7 +131,22 @@ export function ProductsPage() {
       result = result.filter((p) => p.subcategory_id === filterSubcategory)
     }
     return result.sort((a, b) => a.name.localeCompare(b.name))
-  }, [products, filterCategory, filterSubcategory])
+  }, [products, branchCategoryIds, filterCategory, filterSubcategory])
+
+  const {
+    paginatedItems: paginatedProducts,
+    currentPage,
+    totalPages,
+    totalItems,
+    itemsPerPage,
+    setCurrentPage,
+  } = usePagination(filteredProducts)
+
+  // Productos de la sucursal (para conteo en titulo)
+  const branchProducts = useMemo(
+    () => products.filter((p) => branchCategoryIds.has(p.category_id)),
+    [products, branchCategoryIds]
+  )
 
   const getCategoryName = (categoryId: string): string => {
     return categories.find((c) => c.id === categoryId)?.name || 'Sin categoria'
@@ -120,6 +164,14 @@ export function ProductsPage() {
   }
 
   const openCreateModal = () => {
+    if (!selectedBranchId) {
+      toast.error('Selecciona una sucursal primero')
+      return
+    }
+    if (selectableCategories.length === 0) {
+      toast.error('No hay categorias en esta sucursal. Crea una primero.')
+      return
+    }
     setSelectedProduct(null)
     const categoryId = filterCategory || selectableCategories[0]?.id || ''
     const subcats = getByCategory(categoryId)
@@ -350,10 +402,27 @@ export function ProductsPage() {
     },
   ]
 
+  // Si no hay sucursal seleccionada, mostrar mensaje
+  if (!selectedBranchId) {
+    return (
+      <PageContainer
+        title="Productos"
+        description="Selecciona una sucursal para ver sus productos"
+      >
+        <Card className="text-center py-12">
+          <p className="text-zinc-500 mb-4">
+            Selecciona una sucursal desde el Dashboard para ver sus productos
+          </p>
+          <Button onClick={() => navigate('/')}>Ir al Dashboard</Button>
+        </Card>
+      </PageContainer>
+    )
+  }
+
   return (
     <PageContainer
-      title="Productos"
-      description={`${products.length} productos en total`}
+      title={`Productos - ${selectedBranch?.name || ''}`}
+      description={`${branchProducts.length} productos en ${selectedBranch?.name || 'la sucursal'}`}
       actions={
         <Button onClick={openCreateModal} leftIcon={<Plus className="w-4 h-4" />}>
           Nuevo Producto
@@ -402,16 +471,24 @@ export function ProductsPage() {
             </Button>
           )}
           <div className="ml-auto text-sm text-zinc-500">
-            Mostrando {filteredProducts.length} de {products.length} productos
+            {filteredProducts.length} de {branchProducts.length} productos
           </div>
         </div>
       </Card>
 
       <Card padding="none">
         <Table
-          data={filteredProducts}
+          data={paginatedProducts}
           columns={columns}
           emptyMessage="No hay productos. Crea uno para comenzar."
+          ariaLabel="Lista de productos"
+        />
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={totalItems}
+          itemsPerPage={itemsPerPage}
+          onPageChange={setCurrentPage}
         />
       </Card>
 

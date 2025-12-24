@@ -10,6 +10,9 @@ interface ToastState {
 
 const generateId = () => crypto.randomUUID()
 
+// Map para almacenar timeout IDs y poder cancelarlos
+const timeoutIds = new Map<string, ReturnType<typeof setTimeout>>()
+
 export const useToastStore = create<ToastState>((set) => ({
   toasts: [],
 
@@ -21,19 +24,36 @@ export const useToastStore = create<ToastState>((set) => ({
 
     // Auto-remove after duration
     const duration = toast.duration ?? 3000
-    setTimeout(() => {
+    const timeoutId = setTimeout(() => {
       set((state) => ({
         toasts: state.toasts.filter((t) => t.id !== id),
       }))
+      timeoutIds.delete(id)
     }, duration)
+
+    timeoutIds.set(id, timeoutId)
   },
 
-  removeToast: (id) =>
+  removeToast: (id) => {
+    // Cancelar el timeout si existe
+    const timeoutId = timeoutIds.get(id)
+    if (timeoutId) {
+      clearTimeout(timeoutId)
+      timeoutIds.delete(id)
+    }
+
     set((state) => ({
       toasts: state.toasts.filter((t) => t.id !== id),
-    })),
+    }))
+  },
 
-  clearToasts: () => set({ toasts: [] }),
+  clearToasts: () => {
+    // Cancelar todos los timeouts
+    timeoutIds.forEach((timeoutId) => clearTimeout(timeoutId))
+    timeoutIds.clear()
+
+    set({ toasts: [] })
+  },
 }))
 
 // Helper functions

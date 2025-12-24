@@ -1,2 +1,2 @@
-export { useModal, type UseModalReturn, type ModalMode } from './useModal'
 export { useFocusTrap } from './useFocusTrap'
+export { usePagination } from './usePagination'

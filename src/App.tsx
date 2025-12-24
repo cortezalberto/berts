@@ -4,6 +4,7 @@ import { ErrorBoundary } from './components/ui'
 import {
   DashboardPage,
   RestaurantPage,
+  BranchesPage,
   CategoriesPage,
   SubcategoriesPage,
   ProductsPage,
@@ -19,6 +20,7 @@ function App() {
           <Route path="/" element={<Layout />}>
             <Route index element={<DashboardPage />} />
             <Route path="restaurant" element={<RestaurantPage />} />
+            <Route path="branches" element={<BranchesPage />} />
             <Route path="categories" element={<CategoriesPage />} />
             <Route path="subcategories" element={<SubcategoriesPage />} />
             <Route path="products" element={<ProductsPage />} />

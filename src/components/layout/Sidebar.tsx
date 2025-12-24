@@ -2,6 +2,7 @@ import { NavLink } from 'react-router-dom'
 import {
   LayoutDashboard,
   Building2,
+  GitBranch,
   FolderTree,
   Layers,
   Package,
@@ -9,10 +10,12 @@ import {
   Settings,
   LogOut,
 } from 'lucide-react'
+import { useBranchStore, selectSelectedBranchId, selectBranchById } from '../../stores/branchStore'
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Restaurante', href: '/restaurant', icon: Building2 },
+  { name: 'Sucursales', href: '/branches', icon: GitBranch },
   { name: 'Categorias', href: '/categories', icon: FolderTree },
   { name: 'Subcategorias', href: '/subcategories', icon: Layers },
   { name: 'Productos', href: '/products', icon: Package },
@@ -24,6 +27,9 @@ const bottomNavigation = [
 ]
 
 export function Sidebar() {
+  const selectedBranchId = useBranchStore(selectSelectedBranchId)
+  const selectedBranch = useBranchStore(selectBranchById(selectedBranchId || ''))
+
   return (
     <aside className="fixed left-0 top-0 h-screen w-64 bg-zinc-900 border-r border-zinc-800 flex flex-col">
       {/* Logo */}
@@ -35,6 +41,18 @@ export function Sidebar() {
           <span className="text-white font-semibold text-lg">barijho</span>
         </div>
       </div>
+
+      {/* Selected Branch Indicator */}
+      {selectedBranch && (
+        <div className="px-4 py-3 border-b border-zinc-800 bg-orange-500/5">
+          <p className="text-xs text-zinc-500 uppercase tracking-wider">
+            Sucursal activa
+          </p>
+          <p className="text-sm font-medium text-orange-500 truncate">
+            {selectedBranch.name}
+          </p>
+        </div>
+      )}
 
       {/* Navigation */}
       <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
@@ -50,7 +68,7 @@ export function Sidebar() {
               }`
             }
           >
-            <item.icon className="w-5 h-5" />
+            <item.icon className="w-5 h-5" aria-hidden="true" />
             <span className="font-medium">{item.name}</span>
           </NavLink>
         ))}
@@ -70,7 +88,7 @@ export function Sidebar() {
               }`
             }
           >
-            <item.icon className="w-5 h-5" />
+            <item.icon className="w-5 h-5" aria-hidden="true" />
             <span className="font-medium">{item.name}</span>
           </NavLink>
         ))}
@@ -82,7 +100,7 @@ export function Sidebar() {
             console.log('Logout')
           }}
         >
-          <LogOut className="w-5 h-5" />
+          <LogOut className="w-5 h-5" aria-hidden="true" />
           <span className="font-medium">Cerrar Sesion</span>
         </button>
       </div>

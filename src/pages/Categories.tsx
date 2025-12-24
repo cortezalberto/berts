@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Plus, Pencil, Trash2, GripVertical } from 'lucide-react'
 import { PageContainer } from '../components/layout'
 import {
@@ -11,16 +12,24 @@ import {
   Toggle,
   ConfirmDialog,
   Badge,
+  Pagination,
 } from '../components/ui'
+import { usePagination } from '../hooks/usePagination'
 import {
   useCategoryStore,
   selectCategories,
 } from '../stores/categoryStore'
+import {
+  useBranchStore,
+  selectSelectedBranchId,
+  selectBranchById,
+} from '../stores/branchStore'
 import { useSubcategoryStore } from '../stores/subcategoryStore'
 import { useProductStore } from '../stores/productStore'
 import { toast } from '../stores/toastStore'
 import { validateCategory, type ValidationErrors } from '../utils/validation'
 import { handleError } from '../utils/logger'
+import { HOME_CATEGORY_NAME } from '../utils/constants'
 import type { Category, CategoryFormData, TableColumn } from '../types'
 
 const initialFormData: CategoryFormData = {
@@ -28,14 +37,19 @@ const initialFormData: CategoryFormData = {
   icon: '',
   image: '',
   order: 0,
+  branch_id: '',
   is_active: true,
 }
 
 export function CategoriesPage() {
+  const navigate = useNavigate()
   const categories = useCategoryStore(selectCategories)
   const addCategory = useCategoryStore((s) => s.addCategory)
   const updateCategory = useCategoryStore((s) => s.updateCategory)
   const deleteCategory = useCategoryStore((s) => s.deleteCategory)
+
+  const selectedBranchId = useBranchStore(selectSelectedBranchId)
+  const selectedBranch = useBranchStore(selectBranchById(selectedBranchId || ''))
 
   const deleteSubcategoriesByCategory = useSubcategoryStore((s) => s.deleteByCategory)
   const getByCategory = useSubcategoryStore((s) => s.getByCategory)
@@ -48,33 +62,59 @@ export function CategoriesPage() {
   const [errors, setErrors] = useState<ValidationErrors<CategoryFormData>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
 
+  // Filtrar categorías por sucursal seleccionada
+  const branchCategories = useMemo(() => {
+    if (!selectedBranchId) return []
+    return categories.filter(
+      (c) => c.branch_id === selectedBranchId && c.name !== HOME_CATEGORY_NAME
+    )
+  }, [categories, selectedBranchId])
+
   const sortedCategories = useMemo(
-    () => [...categories].sort((a, b) => a.order - b.order),
-    [categories]
+    () => [...branchCategories].sort((a, b) => a.order - b.order),
+    [branchCategories]
   )
 
+  const {
+    paginatedItems: paginatedCategories,
+    currentPage,
+    totalPages,
+    totalItems,
+    itemsPerPage,
+    setCurrentPage,
+  } = usePagination(sortedCategories)
+
   const openCreateModal = useCallback(() => {
+    if (!selectedBranchId) {
+      toast.error('Selecciona una sucursal primero')
+      return
+    }
     setSelectedCategory(null)
     setFormData({
       ...initialFormData,
-      order: Math.max(...categories.map((c) => c.order), 0) + 1,
+      branch_id: selectedBranchId,
+      order: Math.max(...branchCategories.map((c) => c.order), 0) + 1,
     })
     setErrors({})
     setIsModalOpen(true)
-  }, [categories])
+  }, [branchCategories, selectedBranchId])
 
-  const openEditModal = useCallback((category: Category) => {
-    setSelectedCategory(category)
-    setFormData({
-      name: category.name,
-      icon: category.icon || '',
-      image: category.image || '',
-      order: category.order,
-      is_active: category.is_active ?? true,
-    })
-    setErrors({})
-    setIsModalOpen(true)
-  }, [])
+  const openEditModal = useCallback(
+    (category: Category) => {
+      setSelectedCategory(category)
+      setFormData({
+        name: category.name,
+        icon: category.icon || '',
+        image: category.image || '',
+        order: category.order,
+        branch_id: category.branch_id,
+        is_active: category.is_active ?? true,
+      })
+      setErrors({})
+      setIsModalOpen(true)
+    },
+    []
+  )
 
   const openDeleteDialog = useCallback((category: Category) => {
     setSelectedCategory(category)
@@ -235,10 +275,27 @@ export function CategoriesPage() {
     [getByCategory, openEditModal, openDeleteDialog]
   )
 
+  // Si no hay sucursal seleccionada, mostrar mensaje
+  if (!selectedBranchId) {
+    return (
+      <PageContainer
+        title="Categorias"
+        description="Selecciona una sucursal para ver sus categorias"
+      >
+        <Card className="text-center py-12">
+          <p className="text-zinc-500 mb-4">
+            Selecciona una sucursal desde el Dashboard para ver sus categorias
+          </p>
+          <Button onClick={() => navigate('/')}>Ir al Dashboard</Button>
+        </Card>
+      </PageContainer>
+    )
+  }
+
   return (
     <PageContainer
-      title="Categorias"
-      description="Administra las categorias del menu"
+      title={`Categorias - ${selectedBranch?.name || ''}`}
+      description={`Administra las categorias de ${selectedBranch?.name || 'la sucursal'}`}
       actions={
         <Button onClick={openCreateModal} leftIcon={<Plus className="w-4 h-4" />}>
           Nueva Categoria
@@ -247,9 +304,17 @@ export function CategoriesPage() {
     >
       <Card padding="none">
         <Table
-          data={sortedCategories}
+          data={paginatedCategories}
           columns={columns}
           emptyMessage="No hay categorias. Crea una para comenzar."
+          ariaLabel={`Categorias de ${selectedBranch?.name || 'sucursal'}`}
+        />
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={totalItems}
+          itemsPerPage={itemsPerPage}
+          onPageChange={setCurrentPage}
         />
       </Card>
 

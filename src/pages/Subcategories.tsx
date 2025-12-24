@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Plus, Pencil, Trash2, Filter } from 'lucide-react'
 import { PageContainer } from '../components/layout'
 import {
@@ -12,16 +13,24 @@ import {
   Toggle,
   ConfirmDialog,
   Badge,
+  Pagination,
 } from '../components/ui'
+import { usePagination } from '../hooks/usePagination'
 import { useCategoryStore, selectCategories } from '../stores/categoryStore'
 import {
   useSubcategoryStore,
   selectSubcategories,
 } from '../stores/subcategoryStore'
 import { useProductStore, selectProducts } from '../stores/productStore'
+import {
+  useBranchStore,
+  selectSelectedBranchId,
+  selectBranchById,
+} from '../stores/branchStore'
 import { toast } from '../stores/toastStore'
 import { validateSubcategory, type ValidationErrors } from '../utils/validation'
 import { handleError } from '../utils/logger'
+import { HOME_CATEGORY_NAME } from '../utils/constants'
 import type { Subcategory, SubcategoryFormData, TableColumn } from '../types'
 
 const initialFormData: SubcategoryFormData = {
@@ -33,6 +42,8 @@ const initialFormData: SubcategoryFormData = {
 }
 
 export function SubcategoriesPage() {
+  const navigate = useNavigate()
+
   // Use selectors for stable references
   const categories = useCategoryStore(selectCategories)
   const subcategories = useSubcategoryStore(selectSubcategories)
@@ -44,6 +55,9 @@ export function SubcategoriesPage() {
   const products = useProductStore(selectProducts)
   const deleteProductsBySubcategory = useProductStore((s) => s.deleteBySubcategory)
 
+  const selectedBranchId = useBranchStore(selectSelectedBranchId)
+  const selectedBranch = useBranchStore(selectBranchById(selectedBranchId || ''))
+
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
   const [selectedSubcategory, setSelectedSubcategory] = useState<Subcategory | null>(null)
@@ -52,10 +66,18 @@ export function SubcategoriesPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [filterCategory, setFilterCategory] = useState<string>('')
 
+  // Filtrar categorias por sucursal seleccionada
+  const branchCategories = useMemo(() => {
+    if (!selectedBranchId) return []
+    return categories.filter(
+      (c) => c.branch_id === selectedBranchId && c.name !== HOME_CATEGORY_NAME
+    )
+  }, [categories, selectedBranchId])
+
   // Memoized derived data
   const selectableCategories = useMemo(
-    () => categories.filter((c) => c.id !== '0'),
-    [categories]
+    () => branchCategories.filter((c) => c.id !== '0'),
+    [branchCategories]
   )
 
   const categoryOptions = useMemo(
@@ -64,8 +86,8 @@ export function SubcategoriesPage() {
   )
 
   const categoryMap = useMemo(
-    () => new Map(categories.map((c) => [c.id, c.name])),
-    [categories]
+    () => new Map(branchCategories.map((c) => [c.id, c.name])),
+    [branchCategories]
   )
 
   // Pre-calculate product counts per subcategory for O(1) lookup
@@ -77,8 +99,15 @@ export function SubcategoriesPage() {
     return counts
   }, [products])
 
+  // Obtener IDs de categorias de esta sucursal
+  const branchCategoryIds = useMemo(
+    () => new Set(branchCategories.map((c) => c.id)),
+    [branchCategories]
+  )
+
   const filteredSubcategories = useMemo(() => {
-    let result = [...subcategories]
+    // Filtrar por sucursal primero
+    let result = subcategories.filter((s) => branchCategoryIds.has(s.category_id))
     if (filterCategory) {
       result = result.filter((s) => s.category_id === filterCategory)
     }
@@ -88,9 +117,26 @@ export function SubcategoriesPage() {
       }
       return a.order - b.order
     })
-  }, [subcategories, filterCategory])
+  }, [subcategories, branchCategoryIds, filterCategory])
+
+  const {
+    paginatedItems: paginatedSubcategories,
+    currentPage,
+    totalPages,
+    totalItems,
+    itemsPerPage,
+    setCurrentPage,
+  } = usePagination(filteredSubcategories)
 
   const openCreateModal = useCallback(() => {
+    if (!selectedBranchId) {
+      toast.error('Selecciona una sucursal primero')
+      return
+    }
+    if (selectableCategories.length === 0) {
+      toast.error('No hay categorias en esta sucursal. Crea una primero.')
+      return
+    }
     setSelectedSubcategory(null)
     const categoryId = filterCategory || selectableCategories[0]?.id || ''
     const categorySubcats = getByCategory(categoryId)
@@ -101,7 +147,7 @@ export function SubcategoriesPage() {
     })
     setErrors({})
     setIsModalOpen(true)
-  }, [filterCategory, selectableCategories, getByCategory])
+  }, [filterCategory, selectableCategories, getByCategory, selectedBranchId])
 
   const openEditModal = useCallback((subcategory: Subcategory) => {
     setSelectedSubcategory(subcategory)
@@ -260,10 +306,27 @@ export function SubcategoriesPage() {
     [categoryMap, productCountMap, openEditModal, openDeleteDialog]
   )
 
+  // Si no hay sucursal seleccionada, mostrar mensaje
+  if (!selectedBranchId) {
+    return (
+      <PageContainer
+        title="Subcategorias"
+        description="Selecciona una sucursal para ver sus subcategorias"
+      >
+        <Card className="text-center py-12">
+          <p className="text-zinc-500 mb-4">
+            Selecciona una sucursal desde el Dashboard para ver sus subcategorias
+          </p>
+          <Button onClick={() => navigate('/')}>Ir al Dashboard</Button>
+        </Card>
+      </PageContainer>
+    )
+  }
+
   return (
     <PageContainer
-      title="Subcategorias"
-      description="Administra las subcategorias del menu"
+      title={`Subcategorias - ${selectedBranch?.name || ''}`}
+      description={`Administra las subcategorias de ${selectedBranch?.name || 'la sucursal'}`}
       actions={
         <Button onClick={openCreateModal} leftIcon={<Plus className="w-4 h-4" />}>
           Nueva Subcategoria
@@ -298,9 +361,17 @@ export function SubcategoriesPage() {
 
       <Card padding="none">
         <Table
-          data={filteredSubcategories}
+          data={paginatedSubcategories}
           columns={columns}
           emptyMessage="No hay subcategorias. Crea una para comenzar."
+          ariaLabel="Lista de subcategorias"
+        />
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={totalItems}
+          itemsPerPage={itemsPerPage}
+          onPageChange={setCurrentPage}
         />
       </Card>
 

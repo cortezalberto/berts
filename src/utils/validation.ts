@@ -1,6 +1,7 @@
 import { PATTERNS } from './constants'
 import type {
   RestaurantFormData,
+  BranchFormData,
   CategoryFormData,
   SubcategoryFormData,
   ProductFormData,
@@ -42,12 +43,34 @@ export function validateRestaurant(data: RestaurantFormData): ValidationResult<R
   }
 }
 
+// Branch validation
+export function validateBranch(data: BranchFormData): ValidationResult<BranchFormData> {
+  const errors: ValidationErrors<BranchFormData> = {}
+
+  if (!data.name.trim()) {
+    errors.name = 'El nombre es requerido'
+  }
+
+  if (data.email && !PATTERNS.EMAIL.test(data.email)) {
+    errors.email = 'Email invalido'
+  }
+
+  return {
+    isValid: Object.keys(errors).length === 0,
+    errors,
+  }
+}
+
 // Category validation
 export function validateCategory(data: CategoryFormData): ValidationResult<CategoryFormData> {
   const errors: ValidationErrors<CategoryFormData> = {}
 
   if (!data.name.trim()) {
     errors.name = 'El nombre es requerido'
+  }
+
+  if (!data.branch_id) {
+    errors.branch_id = 'La sucursal es requerida'
   }
 
   return {
@@ -86,8 +109,8 @@ export function validateProduct(data: ProductFormData): ValidationResult<Product
     errors.description = 'La descripcion es requerida'
   }
 
-  if (data.price <= 0) {
-    errors.price = 'El precio debe ser mayor a 0'
+  if (typeof data.price !== 'number' || isNaN(data.price) || data.price <= 0) {
+    errors.price = 'El precio debe ser un numero mayor a 0'
   }
 
   if (!data.category_id) {
