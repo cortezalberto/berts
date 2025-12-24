@@ -125,6 +125,10 @@ export const useBranchStore = create<BranchState>()(
           state.branches = initialBranches
           state.selectedBranchId = null
         }
+        // Version 3: Reset selectedBranchId to null (no default selection)
+        if (version < 3) {
+          state.selectedBranchId = null
+        }
         return state
       },
     }

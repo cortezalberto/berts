@@ -20,9 +20,16 @@ interface ProductState {
 
 const generateId = () => crypto.randomUUID()
 
+// Helper to create product with default branch pricing fields
+const createProduct = (product: Omit<Product, 'branch_prices' | 'use_branch_prices'>): Product => ({
+  ...product,
+  branch_prices: [],
+  use_branch_prices: false,
+})
+
 // Initial mock products with allergen_ids - Branch 1 (Barijho Centro)
 const initialProducts: Product[] = [
-  {
+  createProduct({
     id: '1',
     name: 'Tofu Frito',
     description: 'Cebolla con queso fundido',
@@ -35,8 +42,8 @@ const initialProducts: Product[] = [
     badge: 'TEX MEX',
     allergen_ids: ['alg-7', 'alg-2'],
     is_active: true,
-  },
-  {
+  }),
+  createProduct({
     id: '2',
     name: 'Risotto de Hongos',
     description: 'Parmesano con hierbas frescas',
@@ -48,8 +55,8 @@ const initialProducts: Product[] = [
     popular: true,
     allergen_ids: ['alg-2'],
     is_active: true,
-  },
-  {
+  }),
+  createProduct({
     id: '3',
     name: 'Hamburguesa Clasica',
     description: 'Medallon de carne con salsa especial',
@@ -61,8 +68,8 @@ const initialProducts: Product[] = [
     popular: true,
     allergen_ids: ['alg-1', 'alg-3', 'alg-10'],
     is_active: true,
-  },
-  {
+  }),
+  createProduct({
     id: '4',
     name: 'Bowl Veggie',
     description: 'Vegetales frescos y quinoa',
@@ -75,8 +82,8 @@ const initialProducts: Product[] = [
     badge: 'VEGANO',
     allergen_ids: [],
     is_active: true,
-  },
-  {
+  }),
+  createProduct({
     id: '5',
     name: 'Salmon a la Parrilla',
     description: 'Con salsa de limon y manteca',
@@ -88,8 +95,8 @@ const initialProducts: Product[] = [
     popular: false,
     allergen_ids: ['alg-4', 'alg-2'],
     is_active: true,
-  },
-  {
+  }),
+  createProduct({
     id: '6',
     name: 'Pasta Carbonara',
     description: 'Pasta cremosa con panceta',
@@ -101,8 +108,8 @@ const initialProducts: Product[] = [
     popular: true,
     allergen_ids: ['alg-1', 'alg-2', 'alg-3'],
     is_active: true,
-  },
-  {
+  }),
+  createProduct({
     id: '7',
     name: 'Cerveza Artesanal',
     description: 'Seleccion de IPA local',
@@ -114,8 +121,8 @@ const initialProducts: Product[] = [
     popular: true,
     allergen_ids: ['alg-1'],
     is_active: true,
-  },
-  {
+  }),
+  createProduct({
     id: '8',
     name: 'Limonada Fresca',
     description: 'Casera con menta',
@@ -127,8 +134,8 @@ const initialProducts: Product[] = [
     popular: true,
     allergen_ids: [],
     is_active: true,
-  },
-  {
+  }),
+  createProduct({
     id: '9',
     name: 'Torta de Chocolate',
     description: 'Chocolate negro intenso',
@@ -140,8 +147,8 @@ const initialProducts: Product[] = [
     popular: true,
     allergen_ids: ['alg-1', 'alg-2', 'alg-3'],
     is_active: true,
-  },
-  {
+  }),
+  createProduct({
     id: '10',
     name: 'Helado',
     description: 'Seleccion de tres bochas',
@@ -153,8 +160,8 @@ const initialProducts: Product[] = [
     popular: true,
     allergen_ids: ['alg-2'],
     is_active: true,
-  },
-  {
+  }),
+  createProduct({
     id: '11',
     name: 'Hamburguesa BBQ',
     description: 'Con bacon y salsa barbacoa',
@@ -167,8 +174,8 @@ const initialProducts: Product[] = [
     badge: 'BBQ',
     allergen_ids: ['alg-1', 'alg-3', 'alg-9'],
     is_active: true,
-  },
-  {
+  }),
+  createProduct({
     id: '12',
     name: 'Mojito Clasico',
     description: 'Ron, menta, lima y soda',
@@ -180,8 +187,8 @@ const initialProducts: Product[] = [
     popular: true,
     allergen_ids: ['alg-11'],
     is_active: true,
-  },
-  {
+  }),
+  createProduct({
     id: '13',
     name: 'Vino Tinto Reserva',
     description: 'Malbec argentino',
@@ -193,8 +200,8 @@ const initialProducts: Product[] = [
     popular: false,
     allergen_ids: ['alg-11'],
     is_active: true,
-  },
-  {
+  }),
+  createProduct({
     id: '14',
     name: 'Ensalada de Frutas',
     description: 'Frutas frescas de estacion',
@@ -207,9 +214,9 @@ const initialProducts: Product[] = [
     badge: 'SALUDABLE',
     allergen_ids: [],
     is_active: true,
-  },
+  }),
   // Branch 2 - Barijho Norte
-  {
+  createProduct({
     id: 'b2-prod-1',
     name: 'Pizza Margherita',
     description: 'Tomate, mozzarella y albahaca',
@@ -221,8 +228,8 @@ const initialProducts: Product[] = [
     popular: true,
     allergen_ids: ['alg-1', 'alg-2'],
     is_active: true,
-  },
-  {
+  }),
+  createProduct({
     id: 'b2-prod-2',
     name: 'Empanada de Carne',
     description: 'Carne cortada a cuchillo',
@@ -234,8 +241,8 @@ const initialProducts: Product[] = [
     popular: true,
     allergen_ids: ['alg-1'],
     is_active: true,
-  },
-  {
+  }),
+  createProduct({
     id: 'b2-prod-3',
     name: 'Licuado de Banana',
     description: 'Con leche y miel',
@@ -247,9 +254,9 @@ const initialProducts: Product[] = [
     popular: true,
     allergen_ids: ['alg-2'],
     is_active: true,
-  },
+  }),
   // Branch 3 - Barijho Sur
-  {
+  createProduct({
     id: 'b3-prod-1',
     name: 'Asado Completo',
     description: 'Vacio, chorizo y morcilla',
@@ -261,8 +268,8 @@ const initialProducts: Product[] = [
     popular: true,
     allergen_ids: [],
     is_active: true,
-  },
-  {
+  }),
+  createProduct({
     id: 'b3-prod-2',
     name: 'Entraña a la Brasa',
     description: 'Con chimichurri casero',
@@ -274,9 +281,9 @@ const initialProducts: Product[] = [
     popular: true,
     allergen_ids: [],
     is_active: true,
-  },
+  }),
   // Branch 4 - Barijho Este
-  {
+  createProduct({
     id: 'b4-prod-1',
     name: 'Sushi Variado',
     description: 'Seleccion de 12 piezas',
@@ -288,8 +295,8 @@ const initialProducts: Product[] = [
     popular: true,
     allergen_ids: ['alg-4', 'alg-7', 'alg-10'],
     is_active: true,
-  },
-  {
+  }),
+  createProduct({
     id: 'b4-prod-2',
     name: 'Ramen Tonkotsu',
     description: 'Caldo de cerdo con huevo',
@@ -301,8 +308,8 @@ const initialProducts: Product[] = [
     popular: true,
     allergen_ids: ['alg-1', 'alg-3', 'alg-7'],
     is_active: true,
-  },
-  {
+  }),
+  createProduct({
     id: 'b4-prod-3',
     name: 'Sake Premium',
     description: 'Sake japones servido frio',
@@ -314,8 +321,8 @@ const initialProducts: Product[] = [
     popular: true,
     allergen_ids: [],
     is_active: true,
-  },
-  {
+  }),
+  createProduct({
     id: 'b4-prod-4',
     name: 'Mochi Helado',
     description: 'Variedad de sabores',
@@ -327,7 +334,7 @@ const initialProducts: Product[] = [
     popular: true,
     allergen_ids: ['alg-2'],
     is_active: true,
-  },
+  }),
 ]
 
 export const useProductStore = create<ProductState>()(
@@ -342,6 +349,8 @@ export const useProductStore = create<ProductState>()(
           id: generateId(),
           ...data,
           allergen_ids: data.allergen_ids ?? [],
+          branch_prices: data.branch_prices ?? [],
+          use_branch_prices: data.use_branch_prices ?? false,
           is_active: data.is_active ?? true,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
@@ -411,6 +420,14 @@ export const useProductStore = create<ProductState>()(
         // Version 4: Reset a datos iniciales con category_ids correctos
         if (version < 4) {
           state.products = initialProducts
+        }
+        // Version 5: Add branch_prices and use_branch_prices fields
+        if (version < 5) {
+          state.products = state.products.map(p => ({
+            ...p,
+            branch_prices: p.branch_prices ?? [],
+            use_branch_prices: p.use_branch_prices ?? false,
+          }))
         }
         return state
       },

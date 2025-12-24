@@ -6,7 +6,10 @@ import {
   FolderTree,
   Layers,
   Package,
+  DollarSign,
   AlertTriangle,
+  Tags,
+  Percent,
   Settings,
   LogOut,
 } from 'lucide-react'
@@ -19,7 +22,10 @@ const navigation = [
   { name: 'Categorias', href: '/categories', icon: FolderTree },
   { name: 'Subcategorias', href: '/subcategories', icon: Layers },
   { name: 'Productos', href: '/products', icon: Package },
+  { name: 'Precios', href: '/prices', icon: DollarSign },
   { name: 'Alergenos', href: '/allergens', icon: AlertTriangle },
+  { name: 'Tipos de Promo', href: '/promotion-types', icon: Tags },
+  { name: 'Promociones', href: '/promotions', icon: Percent },
 ]
 
 const bottomNavigation = [

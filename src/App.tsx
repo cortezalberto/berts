@@ -8,7 +8,10 @@ import {
   CategoriesPage,
   SubcategoriesPage,
   ProductsPage,
+  PricesPage,
   AllergensPage,
+  PromotionTypesPage,
+  PromotionsPage,
   SettingsPage,
 } from './pages'
 
@@ -24,7 +27,10 @@ function App() {
             <Route path="categories" element={<CategoriesPage />} />
             <Route path="subcategories" element={<SubcategoriesPage />} />
             <Route path="products" element={<ProductsPage />} />
+            <Route path="prices" element={<PricesPage />} />
             <Route path="allergens" element={<AllergensPage />} />
+            <Route path="promotion-types" element={<PromotionTypesPage />} />
+            <Route path="promotions" element={<PromotionsPage />} />
             <Route path="settings" element={<SettingsPage />} />
           </Route>
         </Routes>

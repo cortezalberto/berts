@@ -19,6 +19,7 @@ import { useBranchStore, selectBranches } from '../stores/branchStore'
 import { useCategoryStore } from '../stores/categoryStore'
 import { useSubcategoryStore } from '../stores/subcategoryStore'
 import { useProductStore } from '../stores/productStore'
+import { usePromotionStore } from '../stores/promotionStore'
 import { useRestaurantStore, selectRestaurant } from '../stores/restaurantStore'
 import { toast } from '../stores/toastStore'
 import { validateBranch, type ValidationErrors } from '../utils/validation'
@@ -49,6 +50,7 @@ export function BranchesPage() {
   const deleteByBranchCategory = useCategoryStore((s) => s.deleteByBranch)
   const deleteByCategories = useSubcategoryStore((s) => s.deleteByCategories)
   const deleteByProductCategories = useProductStore((s) => s.deleteByCategories)
+  const removeBranchFromPromotions = usePromotionStore((s) => s.removeBranchFromPromotions)
 
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
@@ -151,6 +153,10 @@ export function BranchesPage() {
       deleteByProductCategories(categoryIds)
       deleteByCategories(categoryIds)
       deleteByBranchCategory(selectedBranch.id)
+
+      // Limpiar referencias de la sucursal en promociones
+      removeBranchFromPromotions(selectedBranch.id)
+
       deleteBranch(selectedBranch.id)
 
       toast.success('Sucursal eliminada correctamente')
@@ -165,6 +171,7 @@ export function BranchesPage() {
     deleteByProductCategories,
     deleteByCategories,
     deleteByBranchCategory,
+    removeBranchFromPromotions,
     deleteBranch,
   ])
 

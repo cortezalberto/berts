@@ -16,6 +16,7 @@ import {
   Badge,
   AllergenSelect,
   Pagination,
+  BranchPriceInput,
 } from '../components/ui'
 import { usePagination } from '../hooks/usePagination'
 import { useCategoryStore, selectCategories } from '../stores/categoryStore'
@@ -28,7 +29,7 @@ import {
   selectBranchById,
 } from '../stores/branchStore'
 import { toast } from '../stores/toastStore'
-import { validateProduct, type ValidationErrors } from '../utils/validation'
+import { validateProduct, type ValidationErrors, type BranchPriceErrors } from '../utils/validation'
 import { handleError } from '../utils/logger'
 import { HOME_CATEGORY_NAME } from '../utils/constants'
 import type { Product, ProductFormData, TableColumn } from '../types'
@@ -37,6 +38,8 @@ const initialFormData: ProductFormData = {
   name: '',
   description: '',
   price: 0,
+  branch_prices: [],
+  use_branch_prices: false,
   image: '',
   category_id: '',
   subcategory_id: '',
@@ -68,6 +71,7 @@ export function ProductsPage() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
   const [formData, setFormData] = useState<ProductFormData>(initialFormData)
   const [errors, setErrors] = useState<ValidationErrors<ProductFormData>>({})
+  const [branchPriceErrors, setBranchPriceErrors] = useState<BranchPriceErrors>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [filterCategory, setFilterCategory] = useState<string>('')
   const [filterSubcategory, setFilterSubcategory] = useState<string>('')
@@ -181,6 +185,7 @@ export function ProductsPage() {
       subcategory_id: filterSubcategory || subcats[0]?.id || '',
     })
     setErrors({})
+    setBranchPriceErrors({})
     setIsModalOpen(true)
   }
 
@@ -190,6 +195,8 @@ export function ProductsPage() {
       name: product.name,
       description: product.description,
       price: product.price,
+      branch_prices: product.branch_prices || [],
+      use_branch_prices: product.use_branch_prices || false,
       image: product.image,
       category_id: product.category_id,
       subcategory_id: product.subcategory_id,
@@ -201,6 +208,7 @@ export function ProductsPage() {
       stock: product.stock,
     })
     setErrors({})
+    setBranchPriceErrors({})
     setIsModalOpen(true)
   }, [])
 
@@ -213,6 +221,7 @@ export function ProductsPage() {
     const validation = validateProduct(formData)
     if (!validation.isValid) {
       setErrors(validation.errors)
+      setBranchPriceErrors(validation.branchPriceErrors)
       return
     }
 
@@ -296,10 +305,50 @@ export function ProductsPage() {
     {
       key: 'price',
       label: 'Precio',
-      width: 'w-28',
-      render: (item) => (
-        <span className="font-medium text-orange-500">{formatPrice(item.price)}</span>
-      ),
+      width: 'w-36',
+      render: (item) => {
+        // If not using branch prices or no branch prices set, show base price
+        if (!item.use_branch_prices || item.branch_prices.length === 0) {
+          return (
+            <span className="font-medium text-orange-500">
+              {formatPrice(item.price)}
+            </span>
+          )
+        }
+
+        // Get active branch prices
+        const activePrices = item.branch_prices
+          .filter((bp) => bp.is_active)
+          .map((bp) => bp.price)
+
+        if (activePrices.length === 0) {
+          return <span className="text-zinc-500">-</span>
+        }
+
+        const minPrice = Math.min(...activePrices)
+        const maxPrice = Math.max(...activePrices)
+
+        // If all prices are the same, show single price
+        if (minPrice === maxPrice) {
+          return (
+            <span className="font-medium text-orange-500">
+              {formatPrice(minPrice)}
+            </span>
+          )
+        }
+
+        // Show price range
+        return (
+          <div className="space-y-0.5">
+            <span className="font-medium text-orange-500">
+              {formatPrice(minPrice)} - {formatPrice(maxPrice)}
+            </span>
+            <div className="text-xs text-zinc-500">
+              {activePrices.length} sucursales
+            </div>
+          </div>
+        )
+      },
     },
     {
       key: 'category_id',
@@ -554,31 +603,32 @@ export function ProductsPage() {
             rows={2}
           />
 
-          <div className="grid grid-cols-2 gap-4">
-            <Input
-              label="Precio"
-              type="number"
-              value={formData.price}
-              onChange={(e) =>
-                setFormData((prev) => ({
-                  ...prev,
-                  price: parseFloat(e.target.value) || 0,
-                }))
-              }
-              min={0}
-              step={0.01}
-              error={errors.price}
-            />
+          <BranchPriceInput
+            label="Precio"
+            defaultPrice={formData.price}
+            branchPrices={formData.branch_prices}
+            useBranchPrices={formData.use_branch_prices}
+            onDefaultPriceChange={(price) =>
+              setFormData((prev) => ({ ...prev, price }))
+            }
+            onBranchPricesChange={(branch_prices) =>
+              setFormData((prev) => ({ ...prev, branch_prices }))
+            }
+            onUseBranchPricesChange={(use_branch_prices) =>
+              setFormData((prev) => ({ ...prev, use_branch_prices }))
+            }
+            error={errors.price || errors.branch_prices}
+            priceErrors={branchPriceErrors}
+          />
 
-            <Input
-              label="Badge (opcional)"
-              value={formData.badge || ''}
-              onChange={(e) =>
-                setFormData((prev) => ({ ...prev, badge: e.target.value }))
-              }
-              placeholder="Ej: VEGANO, NUEVO, PROMO"
-            />
-          </div>
+          <Input
+            label="Badge (opcional)"
+            value={formData.badge || ''}
+            onChange={(e) =>
+              setFormData((prev) => ({ ...prev, badge: e.target.value }))
+            }
+            placeholder="Ej: VEGANO, NUEVO, PROMO"
+          />
 
           <ImageUpload
             label="Imagen"

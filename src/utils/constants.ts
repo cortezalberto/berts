@@ -1,5 +1,4 @@
 // Category constants
-export const HOME_CATEGORY_ID = '0'
 export const HOME_CATEGORY_NAME = 'Home'
 
 // Storage keys for localStorage persistence
@@ -10,16 +9,20 @@ export const STORAGE_KEYS = {
   SUBCATEGORIES: 'dashboard-subcategories',
   PRODUCTS: 'dashboard-products',
   ALLERGENS: 'dashboard-allergens',
+  PROMOTIONS: 'dashboard-promotions',
+  PROMOTION_TYPES: 'dashboard-promotion-types',
 } as const
 
 // Store versions for migration support
 export const STORE_VERSIONS = {
   RESTAURANT: 1,
-  BRANCHES: 2,
+  BRANCHES: 3,
   CATEGORIES: 3,
   SUBCATEGORIES: 3,
-  PRODUCTS: 4,
+  PRODUCTS: 5,
   ALLERGENS: 1,
+  PROMOTIONS: 2,
+  PROMOTION_TYPES: 1,
 } as const
 
 // Currency and locale settings

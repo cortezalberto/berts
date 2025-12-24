@@ -82,12 +82,21 @@ export interface AllergenFormData {
   is_active: boolean
 }
 
+// Branch price for products (per-branch pricing)
+export interface BranchPrice {
+  branch_id: string
+  price: number
+  is_active: boolean  // true = product is sold at this branch
+}
+
 // Product types
 export interface Product {
   id: string
   name: string
   description: string
-  price: number
+  price: number                    // Base price (used when use_branch_prices is false)
+  branch_prices: BranchPrice[]     // Per-branch pricing
+  use_branch_prices: boolean       // Toggle for per-branch pricing mode
   image: string
   category_id: string
   subcategory_id: string
@@ -122,7 +131,9 @@ export interface SubcategoryFormData {
 export interface ProductFormData {
   name: string
   description: string
-  price: number
+  price: number                    // Base price
+  branch_prices: BranchPrice[]     // Per-branch pricing
+  use_branch_prices: boolean       // Toggle for per-branch pricing mode
   image: string
   category_id: string
   subcategory_id: string
@@ -178,4 +189,61 @@ export interface Toast {
   type: 'success' | 'error' | 'warning' | 'info'
   message: string
   duration?: number
+}
+
+// Promotion Type types
+export interface PromotionType {
+  id: string
+  name: string
+  description?: string
+  icon?: string
+  is_active?: boolean
+  created_at?: string
+  updated_at?: string
+}
+
+export interface PromotionTypeFormData {
+  name: string
+  description?: string
+  icon?: string
+  is_active: boolean
+}
+
+// Promotion types
+export interface PromotionItem {
+  product_id: string
+  quantity: number
+}
+
+export interface Promotion {
+  id: string
+  name: string
+  description?: string
+  price: number
+  image?: string
+  start_date: string
+  end_date: string
+  start_time: string
+  end_time: string
+  promotion_type_id: string
+  branch_ids: string[]
+  items: PromotionItem[]
+  is_active?: boolean
+  created_at?: string
+  updated_at?: string
+}
+
+export interface PromotionFormData {
+  name: string
+  description: string
+  price: number
+  image: string
+  start_date: string
+  end_date: string
+  start_time: string
+  end_time: string
+  promotion_type_id: string
+  branch_ids: string[]
+  items: PromotionItem[]
+  is_active: boolean
 }

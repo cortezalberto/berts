@@ -9,9 +9,13 @@ Restaurant Admin Dashboard ("barijho") for managing menu items with multi-branch
 **Data Hierarchy:**
 ```
 Restaurant (1) → Branch (N) → Category (N) → Subcategory (N) → Product (N)
-                                                    ↓
-                                              Allergen (M:N)
+                    ↑                                              ↓
+              Promotion (M:N via branch_ids[])              Allergen (M:N)
+                    ↓                                              ↓
+            PromotionItem (N) → Product ←─────────────── BranchPrice (N)
 ```
+
+**Branch Selection:** No branch is selected by default. Users must select a branch from the Dashboard to view/edit categories, subcategories, products, and prices.
 
 ## Commands
 
@@ -37,7 +41,7 @@ npm run preview   # Preview production build
 - `src/pages/` - Page components for each route
 - `src/stores/` - Zustand stores with persist middleware and selectors
 - `src/types/index.ts` - Centralized TypeScript interfaces
-- `src/hooks/` - Custom hooks (usePagination, useFocusTrap)
+- `src/hooks/` - Custom hooks (usePagination, useFocusTrap, useModal)
 - `src/utils/` - Constants, validation, and logging utilities
 - `src/services/` - API layer (empty, ready for backend integration)
 
@@ -105,7 +109,7 @@ deleteAllergen(allergenId)
 ### Constants and Configuration
 All magic strings and configuration live in `src/utils/constants.ts`:
 - `HOME_CATEGORY_NAME` - Special category name filter ('Home')
-- `STORAGE_KEYS` - localStorage persistence keys (branches, categories, subcategories, products, allergens, restaurant)
+- `STORAGE_KEYS` - localStorage persistence keys (branches, categories, subcategories, products, allergens, promotion-types, promotions, restaurant)
 - `STORE_VERSIONS` - For Zustand persist migrations (increment when changing data structure)
 - `LOCALE` - Currency (ARS) and language (es-AR)
 - `PATTERNS` - Validation regex patterns
@@ -137,11 +141,41 @@ Routes nested under Layout component (includes skip link for accessibility):
 - `/categories` - Category management (branch-scoped)
 - `/subcategories` - Subcategory management (branch-scoped)
 - `/products` - Product management (branch-scoped)
+- `/prices` - Price management (branch-scoped, bulk updates)
 - `/allergens` - Allergen management (global)
+- `/promotion-types` - Promotion types management (global)
+- `/promotions` - Promotions management (multi-branch)
 - `/settings` - App settings
 
 ### Type System
-Types centralized in `src/types/index.ts`. Data models (Restaurant, Branch, Category, Product, Allergen) are separate from form data types (RestaurantFormData, etc.).
+Types centralized in `src/types/index.ts`. Data models (Restaurant, Branch, Category, Product, Allergen, PromotionType, Promotion) are separate from form data types (RestaurantFormData, etc.).
+
+### Per-Branch Pricing
+Products support per-branch pricing with the `BranchPrice` type:
+```typescript
+interface BranchPrice {
+  branch_id: string
+  price: number
+  is_active: boolean  // false = product not sold at this branch
+}
+
+interface Product {
+  price: number                  // Base price (used when use_branch_prices is false)
+  branch_prices: BranchPrice[]   // Per-branch pricing
+  use_branch_prices: boolean     // Toggle for per-branch mode
+  // ...other fields
+}
+```
+
+Use `BranchPriceInput` component for the UI. Validation returns both `errors` and `branchPriceErrors`:
+```typescript
+const validation = validateProduct(formData)
+if (!validation.isValid) {
+  setErrors(validation.errors)
+  setBranchPriceErrors(validation.branchPriceErrors)  // Record<branch_id, string>
+  return
+}
+```
 
 ### Master-Detail Relationships
 Products have a many-to-many relationship with Allergens via `allergen_ids: string[]`. Use the `AllergenSelect` component for multi-select in forms:
@@ -152,6 +186,36 @@ Products have a many-to-many relationship with Allergens via `allergen_ids: stri
   onChange={(ids) => setFormData(prev => ({ ...prev, allergen_ids: ids }))}
 />
 ```
+
+### Promotions System
+Promotions are combos of products with time-based scheduling. Use `ProductSelect` for products, `BranchCheckboxes` for branches:
+```typescript
+interface Promotion {
+  id: string
+  name: string
+  price: number
+  start_date: string        // YYYY-MM-DD
+  end_date: string          // YYYY-MM-DD
+  start_time: string        // HH:mm (e.g., "17:00")
+  end_time: string          // HH:mm (e.g., "20:00")
+  promotion_type_id: string // Reference to PromotionType
+  branch_ids: string[]      // Explicit list of branch IDs
+  items: PromotionItem[]    // Products in the combo
+  is_active: boolean
+}
+
+// Validation with context:
+const validation = validatePromotion(formData, { isEditing: !!selectedPromotion })
+```
+
+**Promotion Validation Rules:**
+- New promotions: `start_date` and `start_time` must be in the future
+- Editing: start date/time validation is skipped (allows editing past promotions)
+- `end_date` must be >= `start_date`
+- Cannot activate a promotion with `end_date` in the past
+- Same-day promotions: `end_time` must be > `start_time`
+
+Note: `branch_ids` always contains explicit IDs. All branches selected by default when creating.
 
 ### Styling
 - Dark theme with zinc backgrounds (bg-zinc-950)
@@ -231,3 +295,4 @@ The hook auto-resets to page 1 when filtered data changes.
 - Uses `crypto.randomUUID()` for ID generation
 - ErrorBoundary wraps the entire app in App.tsx
 - 12 predefined allergens (Gluten, Lacteos, Huevos, Pescado, Mariscos, Frutos Secos, Soja, Apio, Mostaza, Sesamo, Sulfitos, Altramuces)
+- 4 predefined promotion types (Happy Hour, Combo Familiar, 2x1, Descuento)
