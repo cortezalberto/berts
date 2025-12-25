@@ -1,4 +1,5 @@
-import { NavLink } from 'react-router-dom'
+import { useState } from 'react'
+import { NavLink, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard,
   Building2,
@@ -12,16 +13,42 @@ import {
   Percent,
   Settings,
   LogOut,
+  ChevronDown,
+  ClipboardList,
 } from 'lucide-react'
 import { useBranchStore, selectSelectedBranchId, selectBranchById } from '../../stores/branchStore'
 
-const navigation = [
+interface NavItem {
+  name: string
+  href: string
+  icon: React.ComponentType<{ className?: string }>
+}
+
+interface NavGroup {
+  name: string
+  icon: React.ComponentType<{ className?: string }>
+  children: NavItem[]
+}
+
+type NavigationItem = NavItem | NavGroup
+
+function isNavGroup(item: NavigationItem): item is NavGroup {
+  return 'children' in item
+}
+
+const navigation: NavigationItem[] = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Restaurante', href: '/restaurant', icon: Building2 },
-  { name: 'Sucursales', href: '/branches', icon: GitBranch },
-  { name: 'Categorias', href: '/categories', icon: FolderTree },
-  { name: 'Subcategorias', href: '/subcategories', icon: Layers },
-  { name: 'Productos', href: '/products', icon: Package },
+  {
+    name: 'Gestion',
+    icon: ClipboardList,
+    children: [
+      { name: 'Sucursales', href: '/branches', icon: GitBranch },
+      { name: 'Categorias', href: '/categories', icon: FolderTree },
+      { name: 'Subcategorias', href: '/subcategories', icon: Layers },
+      { name: 'Productos', href: '/products', icon: Package },
+    ],
+  },
   { name: 'Precios', href: '/prices', icon: DollarSign },
   { name: 'Alergenos', href: '/allergens', icon: AlertTriangle },
   { name: 'Tipos de Promo', href: '/promotion-types', icon: Tags },
@@ -33,8 +60,14 @@ const bottomNavigation = [
 ]
 
 export function Sidebar() {
+  const location = useLocation()
   const selectedBranchId = useBranchStore(selectSelectedBranchId)
   const selectedBranch = useBranchStore(selectBranchById(selectedBranchId))
+
+  // Check if any child route is active to auto-expand the group
+  const gestionPaths = ['/branches', '/categories', '/subcategories', '/products']
+  const isGestionActive = gestionPaths.some((path) => location.pathname === path)
+  const [isGestionOpen, setIsGestionOpen] = useState(isGestionActive)
 
   return (
     <aside className="fixed left-0 top-0 h-screen w-64 bg-zinc-900 border-r border-zinc-800 flex flex-col">
@@ -62,22 +95,78 @@ export function Sidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-        {navigation.map((item) => (
-          <NavLink
-            key={item.name}
-            to={item.href}
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors duration-150 ${
-                isActive
-                  ? 'bg-orange-500/10 text-orange-500'
-                  : 'text-zinc-400 hover:text-white hover:bg-zinc-800'
-              }`
-            }
-          >
-            <item.icon className="w-5 h-5" aria-hidden="true" />
-            <span className="font-medium">{item.name}</span>
-          </NavLink>
-        ))}
+        {navigation.map((item) => {
+          if (isNavGroup(item)) {
+            const isOpen = item.name === 'Gestion' ? isGestionOpen : false
+            const hasActiveChild = item.children.some(
+              (child) => location.pathname === child.href
+            )
+
+            return (
+              <div key={item.name}>
+                <button
+                  onClick={() => {
+                    if (item.name === 'Gestion') {
+                      setIsGestionOpen(!isGestionOpen)
+                    }
+                  }}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors duration-150 ${
+                    hasActiveChild
+                      ? 'text-orange-500'
+                      : 'text-zinc-400 hover:text-white hover:bg-zinc-800'
+                  }`}
+                  aria-expanded={isOpen}
+                >
+                  <item.icon className="w-5 h-5" aria-hidden="true" />
+                  <span className="font-medium flex-1 text-left">{item.name}</span>
+                  <ChevronDown
+                    className={`w-4 h-4 transition-transform duration-200 ${
+                      isOpen ? 'rotate-180' : ''
+                    }`}
+                    aria-hidden="true"
+                  />
+                </button>
+                {isOpen && (
+                  <div className="mt-1 ml-4 pl-3 border-l border-zinc-800 space-y-1">
+                    {item.children.map((child) => (
+                      <NavLink
+                        key={child.name}
+                        to={child.href}
+                        className={({ isActive }) =>
+                          `flex items-center gap-3 px-3 py-2 rounded-lg transition-colors duration-150 ${
+                            isActive
+                              ? 'bg-orange-500/10 text-orange-500'
+                              : 'text-zinc-400 hover:text-white hover:bg-zinc-800'
+                          }`
+                        }
+                      >
+                        <child.icon className="w-4 h-4" aria-hidden="true" />
+                        <span className="text-sm font-medium">{child.name}</span>
+                      </NavLink>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )
+          }
+
+          return (
+            <NavLink
+              key={item.name}
+              to={item.href}
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors duration-150 ${
+                  isActive
+                    ? 'bg-orange-500/10 text-orange-500'
+                    : 'text-zinc-400 hover:text-white hover:bg-zinc-800'
+                }`
+              }
+            >
+              <item.icon className="w-5 h-5" aria-hidden="true" />
+              <span className="font-medium">{item.name}</span>
+            </NavLink>
+          )
+        })}
       </nav>
 
       {/* Bottom Navigation */}

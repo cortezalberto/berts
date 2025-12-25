@@ -142,10 +142,11 @@ export function SubcategoriesPage() {
     setSelectedSubcategory(null)
     const categoryId = filterCategory || selectableCategories[0]?.id || ''
     const categorySubcats = getByCategory(categoryId)
+    const orders = categorySubcats.map((s) => s.order).filter((o) => typeof o === 'number' && !isNaN(o))
     setFormData({
       ...initialFormData,
       category_id: categoryId,
-      order: Math.max(...categorySubcats.map((s) => s.order), 0) + 1,
+      order: (orders.length > 0 ? Math.max(...orders) : 0) + 1,
     })
     setErrors({})
     setIsModalOpen(true)
@@ -169,7 +170,7 @@ export function SubcategoriesPage() {
     setIsDeleteOpen(true)
   }, [])
 
-  const handleSubmit = useCallback(async () => {
+  const handleSubmit = useCallback(() => {
     const validation = validateSubcategory(formData)
     if (!validation.isValid) {
       setErrors(validation.errors)

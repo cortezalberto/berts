@@ -79,7 +79,8 @@ export const useBranchStore = create<BranchState>()(
 
       addBranch: (data) => {
         const branches = get().branches
-        const maxOrder = Math.max(...branches.map((b) => b.order), 0)
+        const orders = branches.map((b) => b.order).filter((o) => typeof o === 'number' && !isNaN(o))
+        const maxOrder = orders.length > 0 ? Math.max(...orders) : 0
         const newBranch: Branch = {
           id: generateId(),
           ...data,

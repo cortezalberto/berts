@@ -24,6 +24,7 @@ import { useCategoryStore, selectCategories } from '../stores/categoryStore'
 import { useSubcategoryStore, selectSubcategories } from '../stores/subcategoryStore'
 import { useProductStore, selectProducts } from '../stores/productStore'
 import { useAllergenStore, selectAllergens } from '../stores/allergenStore'
+import { usePromotionStore } from '../stores/promotionStore'
 import {
   useBranchStore,
   selectSelectedBranchId,
@@ -64,6 +65,7 @@ export function ProductsPage() {
   const updateProduct = useProductStore((s) => s.updateProduct)
   const deleteProduct = useProductStore((s) => s.deleteProduct)
   const allergens = useAllergenStore(selectAllergens)
+  const removeProductFromPromotions = usePromotionStore((s) => s.removeProductFromPromotions)
 
   const selectedBranchId = useBranchStore(selectSelectedBranchId)
   const selectedBranch = useBranchStore(selectBranchById(selectedBranchId))
@@ -219,7 +221,7 @@ export function ProductsPage() {
     setIsDeleteOpen(true)
   }, [])
 
-  const handleSubmit = useCallback(async () => {
+  const handleSubmit = useCallback(() => {
     const validation = validateProduct(formData)
     if (!validation.isValid) {
       setErrors(validation.errors)
@@ -249,6 +251,8 @@ export function ProductsPage() {
     if (!selectedProduct) return
 
     try {
+      // Clean up product references from promotions first
+      removeProductFromPromotions(selectedProduct.id)
       deleteProduct(selectedProduct.id)
       toast.success('Producto eliminado correctamente')
       setIsDeleteOpen(false)
@@ -256,7 +260,7 @@ export function ProductsPage() {
       const message = handleError(error, 'ProductsPage.handleDelete')
       toast.error(`Error al eliminar el producto: ${message}`)
     }
-  }, [selectedProduct, deleteProduct])
+  }, [selectedProduct, deleteProduct, removeProductFromPromotions])
 
   const handleCategoryChange = (categoryId: string) => {
     const subcats = getByCategory(categoryId)

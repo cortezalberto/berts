@@ -27,13 +27,20 @@ export function usePagination<T>(
   const totalItems = items.length
   const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage))
 
-  // Calculate safe page (auto-correct if current exceeds total after filtering)
-  const safePage = currentPage > totalPages ? 1 : currentPage
+  // Calculate safe page - auto-correct if current exceeds total after filtering
+  // Using Math.min/max to ensure page is always valid without needing effect
+  const safePage = useMemo(() => {
+    if (currentPage > totalPages) {
+      return 1
+    }
+    return Math.max(1, Math.min(currentPage, totalPages))
+  }, [currentPage, totalPages])
 
   // Wrap setCurrentPage to clamp values within valid range
   const setCurrentPage = useCallback(
     (page: number) => {
-      setCurrentPageInternal(Math.max(1, Math.min(page, totalPages)))
+      const validPage = Math.max(1, Math.min(page, totalPages))
+      setCurrentPageInternal(validPage)
     },
     [totalPages]
   )

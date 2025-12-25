@@ -92,10 +92,11 @@ export function CategoriesPage() {
       return
     }
     setSelectedCategory(null)
+    const orders = branchCategories.map((c) => c.order).filter((o) => typeof o === 'number' && !isNaN(o))
     setFormData({
       ...initialFormData,
       branch_id: selectedBranchId,
-      order: Math.max(...branchCategories.map((c) => c.order), 0) + 1,
+      order: (orders.length > 0 ? Math.max(...orders) : 0) + 1,
     })
     setErrors({})
     setIsModalOpen(true)
@@ -123,7 +124,7 @@ export function CategoriesPage() {
     setIsDeleteOpen(true)
   }, [])
 
-  const handleSubmit = useCallback(async () => {
+  const handleSubmit = useCallback(() => {
     const validation = validateCategory(formData)
     if (!validation.isValid) {
       setErrors(validation.errors)
@@ -152,10 +153,19 @@ export function CategoriesPage() {
     if (!selectedCategory) return
 
     try {
+      // Validate category exists before cascade delete
+      const categoryExists = categories.some((c) => c.id === selectedCategory.id)
+      if (!categoryExists) {
+        toast.error('La categoria ya no existe')
+        setIsDeleteOpen(false)
+        return
+      }
+
+      // Cascade delete: products first, then subcategories, then category
       const subcats = getByCategory(selectedCategory.id)
       if (subcats.length > 0) {
-        deleteSubcategoriesByCategory(selectedCategory.id)
         deleteProductsByCategory(selectedCategory.id)
+        deleteSubcategoriesByCategory(selectedCategory.id)
       }
 
       deleteCategory(selectedCategory.id)
@@ -167,6 +177,7 @@ export function CategoriesPage() {
     }
   }, [
     selectedCategory,
+    categories,
     getByCategory,
     deleteSubcategoriesByCategory,
     deleteProductsByCategory,

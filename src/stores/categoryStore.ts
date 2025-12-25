@@ -112,7 +112,8 @@ export const useCategoryStore = create<CategoryState>()(
         const categories = get().categories
         // Filtrar por branch para calcular orden
         const branchCategories = categories.filter((c) => c.branch_id === data.branch_id)
-        const maxOrder = Math.max(...branchCategories.map((c) => c.order), 0)
+        const orders = branchCategories.map((c) => c.order).filter((o) => typeof o === 'number' && !isNaN(o))
+        const maxOrder = orders.length > 0 ? Math.max(...orders) : 0
         const newCategory: Category = {
           id: generateId(),
           ...data,

@@ -76,9 +76,10 @@ export function BranchesPage() {
 
   const openCreateModal = useCallback(() => {
     setSelectedBranch(null)
+    const orders = branches.map((b) => b.order).filter((o) => typeof o === 'number' && !isNaN(o))
     setFormData({
       ...initialFormData,
-      order: Math.max(...branches.map((b) => b.order), 0) + 1,
+      order: (orders.length > 0 ? Math.max(...orders) : 0) + 1,
     })
     setErrors({})
     setIsModalOpen(true)
@@ -112,7 +113,7 @@ export function BranchesPage() {
     [selectBranch, navigate]
   )
 
-  const handleSubmit = useCallback(async () => {
+  const handleSubmit = useCallback(() => {
     const validation = validateBranch(formData)
     if (!validation.isValid) {
       setErrors(validation.errors)

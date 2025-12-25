@@ -13,6 +13,7 @@ interface PromotionState {
   // Cascade cleanup actions
   removeBranchFromPromotions: (branchId: string) => void
   clearPromotionType: (promotionTypeId: string) => void
+  removeProductFromPromotions: (productId: string) => void
   // Queries
   getByBranch: (branchId: string) => Promotion[]
 }
@@ -111,6 +112,15 @@ export const usePromotionStore = create<PromotionState>()(
           promotions: state.promotions.filter(
             (promo) => promo.promotion_type_id !== promotionTypeId
           ),
+        })),
+
+      removeProductFromPromotions: (productId) =>
+        set((state) => ({
+          // Remove product from promotion items, keep promotion even if empty
+          promotions: state.promotions.map((promo) => ({
+            ...promo,
+            items: promo.items.filter((item) => item.product_id !== productId),
+          })),
         })),
 
       getByBranch: (branchId) => {

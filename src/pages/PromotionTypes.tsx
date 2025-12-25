@@ -84,7 +84,7 @@ export function PromotionTypesPage() {
     setIsDeleteOpen(true)
   }, [])
 
-  const handleSubmit = useCallback(async () => {
+  const handleSubmit = useCallback(() => {
     const validation = validatePromotionType(formData)
     if (!validation.isValid) {
       setErrors(validation.errors)

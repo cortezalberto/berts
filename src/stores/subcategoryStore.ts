@@ -200,7 +200,8 @@ export const useSubcategoryStore = create<SubcategoryState>()(
         const categorySubcats = subcategories.filter(
           (s) => s.category_id === data.category_id
         )
-        const maxOrder = Math.max(...categorySubcats.map((s) => s.order), 0)
+        const orders = categorySubcats.map((s) => s.order).filter((o) => typeof o === 'number' && !isNaN(o))
+        const maxOrder = orders.length > 0 ? Math.max(...orders) : 0
         const newSubcategory: Subcategory = {
           id: generateId(),
           ...data,

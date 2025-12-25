@@ -93,7 +93,7 @@ export function AllergensPage() {
     setIsDeleteOpen(true)
   }, [])
 
-  const handleSubmit = useCallback(async () => {
+  const handleSubmit = useCallback(() => {
     const validation = validateAllergen(formData)
     if (!validation.isValid) {
       setErrors(validation.errors)
@@ -123,15 +123,18 @@ export function AllergensPage() {
 
     try {
       const productCount = getProductCount(selectedAllergen.id)
+
+      // Delete allergen first, then clean up product references
+      deleteAllergen(selectedAllergen.id)
+
       if (productCount > 0) {
-        // Limpiar referencias huerfanas de los productos
+        // Clean orphan references from products after successful deletion
         removeAllergenFromProducts(selectedAllergen.id)
         toast.warning(
           `Este alergeno estaba vinculado a ${productCount} producto(s). Se elimino la referencia.`
         )
       }
 
-      deleteAllergen(selectedAllergen.id)
       toast.success('Alergeno eliminado correctamente')
       setIsDeleteOpen(false)
     } catch (error) {

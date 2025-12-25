@@ -143,7 +143,7 @@ export function PromotionsPage() {
     setIsDeleteOpen(true)
   }, [])
 
-  const handleSubmit = useCallback(async () => {
+  const handleSubmit = useCallback(() => {
     const validation = validatePromotion(formData, { isEditing: !!selectedPromotion })
     if (!validation.isValid) {
       setErrors(validation.errors)

@@ -164,7 +164,7 @@ export function PricesPage() {
     setIsModalOpen(true)
   }, [])
 
-  const handleSavePrice = useCallback(async () => {
+  const handleSavePrice = useCallback(() => {
     if (!editingProduct || !priceEdits) return
 
     setIsSaving(true)
