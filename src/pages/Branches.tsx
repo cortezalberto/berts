@@ -21,10 +21,12 @@ import { useSubcategoryStore } from '../stores/subcategoryStore'
 import { useProductStore } from '../stores/productStore'
 import { usePromotionStore } from '../stores/promotionStore'
 import { useRestaurantStore, selectRestaurant } from '../stores/restaurantStore'
+import { useTableStore } from '../stores/tableStore'
+import { useOrderHistoryStore } from '../stores/orderHistoryStore'
 import { toast } from '../stores/toastStore'
 import { validateBranch, type ValidationErrors } from '../utils/validation'
 import { handleError } from '../utils/logger'
-import { HOME_CATEGORY_NAME } from '../utils/constants'
+import { HOME_CATEGORY_NAME, BRANCH_DEFAULT_OPENING_TIME, BRANCH_DEFAULT_CLOSING_TIME } from '../utils/constants'
 import { helpContent } from '../utils/helpContent'
 import type { Branch, BranchFormData, TableColumn } from '../types'
 
@@ -34,6 +36,8 @@ const initialFormData: BranchFormData = {
   phone: '',
   email: '',
   image: '',
+  opening_time: BRANCH_DEFAULT_OPENING_TIME,
+  closing_time: BRANCH_DEFAULT_CLOSING_TIME,
   is_active: true,
   order: 0,
 }
@@ -51,7 +55,10 @@ export function BranchesPage() {
   const deleteByBranchCategory = useCategoryStore((s) => s.deleteByBranch)
   const deleteByCategories = useSubcategoryStore((s) => s.deleteByCategories)
   const deleteByProductCategories = useProductStore((s) => s.deleteByCategories)
+  const removeBranchFromProductPrices = useProductStore((s) => s.removeBranchFromProductPrices)
   const removeBranchFromPromotions = usePromotionStore((s) => s.removeBranchFromPromotions)
+  const deleteTablesByBranch = useTableStore((s) => s.deleteByBranch)
+  const deleteOrderHistoryByBranch = useOrderHistoryStore((s) => s.deleteByBranch)
 
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
@@ -93,6 +100,8 @@ export function BranchesPage() {
       phone: branch.phone || '',
       email: branch.email || '',
       image: branch.image || '',
+      opening_time: branch.opening_time ?? BRANCH_DEFAULT_OPENING_TIME,
+      closing_time: branch.closing_time ?? BRANCH_DEFAULT_CLOSING_TIME,
       is_active: branch.is_active ?? true,
       order: branch.order,
     })
@@ -159,13 +168,16 @@ export function BranchesPage() {
       const branchCategories = getByBranch(selectedBranch.id)
       const categoryIds = branchCategories.map((c) => c.id)
 
-      // Cascade delete: products, subcategories, categories, promotions, branch
+      // Cascade delete: products, subcategories, categories, tables, orderHistory, promotions, branch
       // Order matters: delete children first, then parents
       if (categoryIds.length > 0) {
         deleteByProductCategories(categoryIds)
         deleteByCategories(categoryIds)
       }
       deleteByBranchCategory(selectedBranch.id)
+      deleteTablesByBranch(selectedBranch.id)
+      deleteOrderHistoryByBranch(selectedBranch.id)
+      removeBranchFromProductPrices(selectedBranch.id)
       removeBranchFromPromotions(selectedBranch.id)
       deleteBranch(selectedBranch.id)
 
@@ -182,6 +194,9 @@ export function BranchesPage() {
     deleteByProductCategories,
     deleteByCategories,
     deleteByBranchCategory,
+    deleteTablesByBranch,
+    deleteOrderHistoryByBranch,
+    removeBranchFromProductPrices,
     removeBranchFromPromotions,
     deleteBranch,
   ])
@@ -221,6 +236,16 @@ export function BranchesPage() {
             <MapPin className="w-4 h-4" aria-hidden="true" />
             {item.address || '-'}
           </div>
+        ),
+      },
+      {
+        key: 'hours',
+        label: 'Horario',
+        width: 'w-32',
+        render: (item) => (
+          <span className="text-sm text-zinc-400">
+            {item.opening_time || BRANCH_DEFAULT_OPENING_TIME} - {item.closing_time || BRANCH_DEFAULT_CLOSING_TIME}
+          </span>
         ),
       },
       {
@@ -387,6 +412,28 @@ export function BranchesPage() {
             value={formData.image}
             onChange={(url) => setFormData((prev) => ({ ...prev, image: url }))}
           />
+
+          <div className="grid grid-cols-2 gap-4">
+            <Input
+              label="Horario de Apertura"
+              type="time"
+              value={formData.opening_time}
+              onChange={(e) =>
+                setFormData((prev) => ({ ...prev, opening_time: e.target.value }))
+              }
+              error={errors.opening_time}
+            />
+
+            <Input
+              label="Horario de Cierre"
+              type="time"
+              value={formData.closing_time}
+              onChange={(e) =>
+                setFormData((prev) => ({ ...prev, closing_time: e.target.value }))
+              }
+              error={errors.closing_time}
+            />
+          </div>
 
           <Input
             label="Orden"

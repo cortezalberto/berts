@@ -16,6 +16,9 @@ import {
   PromotionTypesPage,
   PromotionsPage,
   SettingsPage,
+  SalesPage,
+  HistoryBranchesPage,
+  HistoryCustomersPage,
 } from './pages'
 
 function App() {
@@ -37,6 +40,9 @@ function App() {
             <Route path="allergens" element={<AllergensPage />} />
             <Route path="promotion-types" element={<PromotionTypesPage />} />
             <Route path="promotions" element={<PromotionsPage />} />
+            <Route path="statistics/sales" element={<SalesPage />} />
+            <Route path="statistics/history/branches" element={<HistoryBranchesPage />} />
+            <Route path="statistics/history/customers" element={<HistoryCustomersPage />} />
             <Route path="settings" element={<SettingsPage />} />
           </Route>
         </Routes>

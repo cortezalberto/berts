@@ -10,6 +10,8 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
   ({ label, error, helperText, className = '', id, ...props }, ref) => {
     const generatedId = useId()
     const textareaId = id || generatedId
+    const errorId = `${textareaId}-error`
+    const helperId = `${textareaId}-helper`
 
     return (
       <div className="w-full">
@@ -24,6 +26,10 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
         <textarea
           ref={ref}
           id={textareaId}
+          aria-invalid={error ? 'true' : undefined}
+          aria-describedby={
+            error ? errorId : helperText ? helperId : undefined
+          }
           className={`
             w-full px-3 py-2
             bg-zinc-800 border rounded-lg
@@ -37,9 +43,15 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
           `}
           {...props}
         />
-        {error && <p className="mt-1 text-sm text-red-500">{error}</p>}
+        {error && (
+          <p id={errorId} className="mt-1 text-sm text-red-500" role="alert">
+            {error}
+          </p>
+        )}
         {helperText && !error && (
-          <p className="mt-1 text-sm text-zinc-500">{helperText}</p>
+          <p id={helperId} className="mt-1 text-sm text-zinc-500">
+            {helperText}
+          </p>
         )}
       </div>
     )

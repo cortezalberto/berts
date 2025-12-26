@@ -169,7 +169,7 @@ Routes nested under Layout component (includes skip link for accessibility):
 - `/restaurant` - Restaurant settings
 - **Gestión > Sucursales:**
   - `/branches` - Branch management (CRUD)
-  - `/branches/tables` - Tables management (placeholder)
+  - `/branches/tables` - Tables management (full CRUD with status workflow)
   - `/branches/staff` - Staff management (placeholder)
   - `/branches/orders` - Orders management (placeholder)
 - **Gestión > Productos:**
@@ -181,6 +181,10 @@ Routes nested under Layout component (includes skip link for accessibility):
   - `/prices` - Price management (branch-scoped, bulk updates)
   - `/promotion-types` - Promotion types management (global)
   - `/promotions` - Promotions management (multi-branch)
+- **Estadísticas:**
+  - `/statistics/sales` - Sales statistics (placeholder)
+  - `/statistics/history/branches` - Order history by branch (placeholder)
+  - `/statistics/history/customers` - Order history by customer (placeholder)
 - `/settings` - App settings
 
 ### Sidebar Navigation Structure
@@ -203,6 +207,11 @@ Restaurante
   - Precios → /prices
   - Tipos de Promo → /promotion-types
   - Promociones → /promotions
+▸ Estadísticas (collapsible group)
+  - Ventas → /statistics/sales
+  ▸ Historial (collapsible subgroup)
+    - Sucursales → /statistics/history/branches
+    - Clientes → /statistics/history/customers
 Configuración (bottom)
 ```
 
@@ -289,6 +298,62 @@ const validation = validatePromotion(formData, { isEditing: !!selectedPromotion 
 - Same-day promotions: `end_time` must be > `start_time`
 
 Note: `branch_ids` always contains explicit IDs. All branches selected by default when creating.
+
+### Tables Management
+Tables have a 5-state workflow with specific time rules. Store is in `src/stores/tableStore.ts`, page in `src/pages/Tables.tsx`:
+```typescript
+type TableStatus = 'libre' | 'ocupada' | 'solicito_pedido' | 'pedido_cumplido' | 'cuenta_solicitada'
+
+interface RestaurantTable {
+  id: string
+  branch_id: string
+  number: number
+  capacity: number
+  sector: string
+  status: TableStatus
+  order_time: string  // HH:mm format
+  close_time: string  // HH:mm format
+  is_active: boolean
+}
+```
+
+**Time Rules by Status:**
+| Status | order_time | close_time |
+|--------|------------|------------|
+| libre | 00:00 | 00:00 |
+| ocupada | 00:00 | 00:00 |
+| solicito_pedido | HH:mm (hora del pedido) | 00:00 |
+| pedido_cumplido | HH:mm (mantiene hora del pedido) | 00:00 |
+| cuenta_solicitada | HH:mm | HH:mm (close >= order) |
+
+**Status Transitions:**
+- When changing to `solicito_pedido`: set `order_time` to current time if coming from libre/ocupada
+- When changing to `pedido_cumplido`: **preserve** `order_time` from previous state (never reset)
+- When changing to `cuenta_solicitada`: preserve `order_time`, set `close_time` to current time
+- When changing to `libre` or `ocupada`: reset both times to 00:00
+
+**Archive Feature:**
+Tables in `cuenta_solicitada` status show an archive button that:
+1. Creates an `OrderHistory` record with branch_id, table_id, table_number
+2. Resets table to `libre` status with both times at 00:00
+```typescript
+const handleArchive = useCallback((table: RestaurantTable) => {
+  createOrderHistory({
+    branch_id: table.branch_id,
+    table_id: table.id,
+    table_number: table.number,
+  })
+  updateTable(table.id, {
+    status: 'libre',
+    order_time: TABLE_DEFAULT_TIME,
+    close_time: TABLE_DEFAULT_TIME,
+  })
+}, [createOrderHistory, updateTable])
+```
+
+**Filter Behavior:**
+- Branch filter defaults to first branch (no "all branches" option)
+- Status filter shows all statuses by default
 
 ### Styling
 - Dark theme with zinc backgrounds (bg-zinc-950)
@@ -573,5 +638,7 @@ parseInt(e.target.value, 10) || 0
 - ErrorBoundary wraps the entire app in App.tsx
 - 12 predefined allergens (Gluten, Lacteos, Huevos, Pescado, Mariscos, Frutos Secos, Soja, Apio, Mostaza, Sesamo, Sulfitos, Altramuces)
 - 4 predefined promotion types (Happy Hour, Combo Familiar, 2x1, Descuento)
-- Tables, Staff, and Orders pages are placeholder stubs under `/branches/*`
-- Store versions: BRANCHES=3, CATEGORIES=3, SUBCATEGORIES=3, PRODUCTS=5, ALLERGENS=2, PROMOTIONS=3, PROMOTION_TYPES=2
+- Tables page fully implemented with status workflow and archive feature
+- Staff and Orders pages are placeholder stubs under `/branches/*`
+- Statistics pages (Sales, History by Branch/Customer) are placeholders
+- Store versions: BRANCHES=4, CATEGORIES=3, SUBCATEGORIES=3, PRODUCTS=5, ALLERGENS=2, PROMOTIONS=3, PROMOTION_TYPES=2, TABLES=6, ORDER_HISTORY=1

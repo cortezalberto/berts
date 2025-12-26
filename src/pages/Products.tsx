@@ -33,7 +33,7 @@ import {
 import { toast } from '../stores/toastStore'
 import { validateProduct, type ValidationErrors, type BranchPriceErrors } from '../utils/validation'
 import { handleError } from '../utils/logger'
-import { HOME_CATEGORY_NAME } from '../utils/constants'
+import { HOME_CATEGORY_NAME, formatPrice } from '../utils/constants'
 import { helpContent } from '../utils/helpContent'
 import type { Product, ProductFormData, TableColumn } from '../types'
 
@@ -156,22 +156,15 @@ export function ProductsPage() {
     [products, branchCategoryIds]
   )
 
-  const getCategoryName = (categoryId: string): string => {
+  const getCategoryName = useCallback((categoryId: string): string => {
     return categories.find((c) => c.id === categoryId)?.name || 'Sin categoria'
-  }
+  }, [categories])
 
-  const getSubcategoryName = (subcategoryId: string): string => {
+  const getSubcategoryName = useCallback((subcategoryId: string): string => {
     return subcategories.find((s) => s.id === subcategoryId)?.name || 'Sin subcategoria'
-  }
+  }, [subcategories])
 
-  const formatPrice = (price: number): string => {
-    return new Intl.NumberFormat('es-AR', {
-      style: 'currency',
-      currency: 'ARS',
-    }).format(price)
-  }
-
-  const openCreateModal = () => {
+  const openCreateModal = useCallback(() => {
     if (!selectedBranchId) {
       toast.error('Selecciona una sucursal primero')
       return
@@ -191,7 +184,7 @@ export function ProductsPage() {
     setErrors({})
     setBranchPriceErrors({})
     setIsModalOpen(true)
-  }
+  }, [selectedBranchId, selectableCategories, filterCategory, filterSubcategory, getByCategory])
 
   const openEditModal = useCallback((product: Product) => {
     setSelectedProduct(product)
@@ -239,6 +232,9 @@ export function ProductsPage() {
         toast.success('Producto creado correctamente')
       }
       setIsModalOpen(false)
+      setFormData(initialFormData)
+      setErrors({})
+      setBranchPriceErrors({})
     } catch (error) {
       const message = handleError(error, 'ProductsPage.handleSubmit')
       toast.error(`Error al guardar el producto: ${message}`)
@@ -251,6 +247,14 @@ export function ProductsPage() {
     if (!selectedProduct) return
 
     try {
+      // Validate product exists before cascade delete
+      const productExists = products.some((p) => p.id === selectedProduct.id)
+      if (!productExists) {
+        toast.error('El producto ya no existe')
+        setIsDeleteOpen(false)
+        return
+      }
+
       // Clean up product references from promotions first
       removeProductFromPromotions(selectedProduct.id)
       deleteProduct(selectedProduct.id)
@@ -260,7 +264,7 @@ export function ProductsPage() {
       const message = handleError(error, 'ProductsPage.handleDelete')
       toast.error(`Error al eliminar el producto: ${message}`)
     }
-  }, [selectedProduct, deleteProduct, removeProductFromPromotions])
+  }, [selectedProduct, products, deleteProduct, removeProductFromPromotions])
 
   const handleCategoryChange = (categoryId: string) => {
     const subcats = getByCategory(categoryId)
@@ -271,12 +275,12 @@ export function ProductsPage() {
     }))
   }
 
-  const columns: TableColumn<Product>[] = [
+  const columns: TableColumn<Product>[] = useMemo(() => [
     {
       key: 'image',
       label: 'Imagen',
       width: 'w-20',
-      render: (item) =>
+      render: (item: Product) =>
         item.image ? (
           <img
             src={item.image}
@@ -456,7 +460,7 @@ export function ProductsPage() {
         </div>
       ),
     },
-  ]
+  ], [allergenMap, openEditModal, openDeleteDialog, getCategoryName, getSubcategoryName])
 
   // Si no hay sucursal seleccionada, mostrar mensaje
   if (!selectedBranchId) {

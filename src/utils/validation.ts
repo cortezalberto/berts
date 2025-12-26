@@ -1,4 +1,4 @@
-import { PATTERNS } from './constants'
+import { PATTERNS, TABLE_DEFAULT_TIME } from './constants'
 import type {
   RestaurantFormData,
   BranchFormData,
@@ -8,6 +8,7 @@ import type {
   AllergenFormData,
   PromotionFormData,
   PromotionTypeFormData,
+  RestaurantTableFormData,
 } from '../types'
 
 export type ValidationErrors<T> = Partial<Record<keyof T, string>>
@@ -101,6 +102,31 @@ export function validateBranch(data: BranchFormData): ValidationResult<BranchFor
     errors.email = 'Email invalido'
   }
 
+  // Validate time format (HH:mm)
+  if (!data.opening_time || !PATTERNS.TIME.test(data.opening_time)) {
+    errors.opening_time = 'Horario de apertura inválido (formato HH:mm)'
+  }
+  if (!data.closing_time || !PATTERNS.TIME.test(data.closing_time)) {
+    errors.closing_time = 'Horario de cierre inválido (formato HH:mm)'
+  }
+
+  // Validate opening_time < closing_time (if both are valid)
+  if (
+    data.opening_time &&
+    data.closing_time &&
+    PATTERNS.TIME.test(data.opening_time) &&
+    PATTERNS.TIME.test(data.closing_time)
+  ) {
+    const [openHour, openMin] = data.opening_time.split(':').map(Number)
+    const [closeHour, closeMin] = data.closing_time.split(':').map(Number)
+    const openMinutes = openHour * 60 + openMin
+    const closeMinutes = closeHour * 60 + closeMin
+
+    if (openMinutes >= closeMinutes) {
+      errors.closing_time = 'El horario de cierre debe ser posterior al de apertura'
+    }
+  }
+
   return {
     isValid: Object.keys(errors).length === 0,
     errors,
@@ -124,6 +150,11 @@ export function validateCategory(data: CategoryFormData): ValidationResult<Categ
     errors.branch_id = 'La sucursal es requerida'
   }
 
+  // Validate order is a non-negative number
+  if (typeof data.order !== 'number' || isNaN(data.order) || data.order < 0) {
+    errors.order = 'El orden debe ser un número positivo'
+  }
+
   return {
     isValid: Object.keys(errors).length === 0,
     errors,
@@ -145,6 +176,11 @@ export function validateSubcategory(data: SubcategoryFormData): ValidationResult
 
   if (!data.category_id) {
     errors.category_id = 'La categoria es requerida'
+  }
+
+  // Validate order is a non-negative number
+  if (typeof data.order !== 'number' || isNaN(data.order) || data.order < 0) {
+    errors.order = 'El orden debe ser un número positivo'
   }
 
   return {
@@ -345,10 +381,130 @@ export function validatePromotion(
 
   if (!data.items || data.items.length === 0) {
     errors.items = 'Debes agregar al menos un producto al combo'
+  } else {
+    // Validate each item has quantity > 0
+    const invalidItem = data.items.find(
+      (item) => typeof item.quantity !== 'number' || isNaN(item.quantity) || item.quantity < 1
+    )
+    if (invalidItem) {
+      errors.items = 'Cada producto debe tener una cantidad mayor a 0'
+    }
   }
 
   if (!data.branch_ids || data.branch_ids.length === 0) {
     errors.branch_ids = 'Debes seleccionar al menos una sucursal'
+  }
+
+  return {
+    isValid: Object.keys(errors).length === 0,
+    errors,
+  }
+}
+
+// Table validation options
+interface TableValidationOptions {
+  existingTables?: Array<{ id: string; branch_id: string; number: number }>
+  editingTableId?: string  // ID of the table being edited (to exclude from uniqueness check)
+}
+
+// Table validation
+export function validateTable(
+  data: RestaurantTableFormData,
+  options: TableValidationOptions = {}
+): ValidationResult<RestaurantTableFormData> {
+  const errors: ValidationErrors<RestaurantTableFormData> = {}
+
+  if (!data.branch_id) {
+    errors.branch_id = 'La sucursal es requerida'
+  }
+
+  if (typeof data.number !== 'number' || isNaN(data.number) || data.number < 1) {
+    errors.number = 'El numero de mesa debe ser mayor a 0'
+  } else if (data.branch_id && options.existingTables) {
+    // Check uniqueness: no other table with same number in same branch
+    const duplicate = options.existingTables.find(
+      (t) =>
+        t.branch_id === data.branch_id &&
+        t.number === data.number &&
+        t.id !== options.editingTableId
+    )
+    if (duplicate) {
+      errors.number = `Ya existe la mesa #${data.number} en esta sucursal`
+    }
+  }
+
+  if (typeof data.capacity !== 'number' || isNaN(data.capacity) || data.capacity < 1) {
+    errors.capacity = 'La capacidad debe ser al menos 1 comensal'
+  } else if (data.capacity > 50) {
+    errors.capacity = 'La capacidad no puede exceder 50 comensales'
+  }
+
+  const trimmedSector = data.sector.trim()
+  if (!trimmedSector) {
+    errors.sector = 'El sector es requerido'
+  } else if (trimmedSector.length < MIN_NAME_LENGTH) {
+    errors.sector = `El sector debe tener al menos ${MIN_NAME_LENGTH} caracteres`
+  } else if (trimmedSector.length > MAX_NAME_LENGTH) {
+    errors.sector = `El sector no puede exceder ${MAX_NAME_LENGTH} caracteres`
+  }
+
+  const validStatuses = ['libre', 'solicito_pedido', 'pedido_cumplido', 'cuenta_solicitada', 'ocupada']
+  if (!validStatuses.includes(data.status)) {
+    errors.status = 'El estado no es valido'
+  }
+
+  // Validate time format (HH:mm)
+  if (!data.order_time || !PATTERNS.TIME.test(data.order_time)) {
+    errors.order_time = 'Hora de pedido invalida (formato HH:mm)'
+  }
+  if (!data.close_time || !PATTERNS.TIME.test(data.close_time)) {
+    errors.close_time = 'Hora de cierre invalida (formato HH:mm)'
+  }
+
+  // Time rules by status:
+  // - libre: order_time=00:00, close_time=00:00
+  // - ocupada: order_time=00:00, close_time=00:00
+  // - solicito_pedido: order_time=HH:mm, close_time=00:00
+  // - pedido_cumplido: order_time=HH:mm, close_time=00:00 (mantiene hora del pedido)
+  // - cuenta_solicitada: order_time=HH:mm, close_time=HH:mm (close >= order)
+
+  if (data.status === 'libre' || data.status === 'ocupada') {
+    if (data.order_time !== TABLE_DEFAULT_TIME) {
+      errors.order_time = 'Hora de pedido debe ser 00:00'
+    }
+    if (data.close_time !== TABLE_DEFAULT_TIME) {
+      errors.close_time = 'Hora de cierre debe ser 00:00'
+    }
+  }
+
+  if (data.status === 'solicito_pedido' || data.status === 'pedido_cumplido') {
+    if (data.order_time === TABLE_DEFAULT_TIME) {
+      errors.order_time = 'Hora de pedido es requerida'
+    }
+    if (data.close_time !== TABLE_DEFAULT_TIME) {
+      errors.close_time = 'Hora de cierre debe ser 00:00'
+    }
+  }
+
+  if (data.status === 'cuenta_solicitada') {
+    if (data.order_time === TABLE_DEFAULT_TIME) {
+      errors.order_time = 'Hora de pedido es requerida cuando cuenta solicitada'
+    }
+    if (data.close_time === TABLE_DEFAULT_TIME) {
+      errors.close_time = 'Hora de cierre es requerida cuando cuenta solicitada'
+    }
+    // Validate that close_time >= order_time
+    if (data.order_time && data.close_time &&
+        data.order_time !== TABLE_DEFAULT_TIME && data.close_time !== TABLE_DEFAULT_TIME) {
+      const [orderHour, orderMin] = data.order_time.split(':').map(Number)
+      const [closeHour, closeMin] = data.close_time.split(':').map(Number)
+      const orderMinutes = orderHour * 60 + orderMin
+      const closeMinutes = closeHour * 60 + closeMin
+
+      if (closeMinutes < orderMinutes) {
+        errors.close_time = 'La hora de cierre no puede ser menor a la hora de pedido'
+      }
+    }
   }
 
   return {

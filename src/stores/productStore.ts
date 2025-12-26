@@ -16,6 +16,8 @@ interface ProductState {
   deleteBySubcategory: (subcategoryId: string) => void
   deleteByCategories: (categoryIds: string[]) => void
   removeAllergenFromProducts: (allergenId: string) => void
+  // Cascade cleanup for branch deletion
+  removeBranchFromProductPrices: (branchId: string) => void
 }
 
 const generateId = () => crypto.randomUUID()
@@ -409,6 +411,16 @@ export const useProductStore = create<ProductState>()(
           products: state.products.map((prod) => ({
             ...prod,
             allergen_ids: (prod.allergen_ids ?? []).filter((id) => id !== allergenId),
+          })),
+        })),
+
+      removeBranchFromProductPrices: (branchId) =>
+        set((state) => ({
+          products: state.products.map((prod) => ({
+            ...prod,
+            branch_prices: (prod.branch_prices ?? []).filter(
+              (bp) => bp.branch_id !== branchId
+            ),
           })),
         })),
     }),

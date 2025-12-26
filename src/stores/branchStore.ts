@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { Branch, BranchFormData } from '../types'
-import { STORAGE_KEYS, STORE_VERSIONS } from '../utils/constants'
+import { STORAGE_KEYS, STORE_VERSIONS, BRANCH_DEFAULT_OPENING_TIME, BRANCH_DEFAULT_CLOSING_TIME } from '../utils/constants'
 
 interface BranchState {
   branches: Branch[]
@@ -27,6 +27,8 @@ const initialBranches: Branch[] = [
     phone: '+54 11 1234-5678',
     email: 'centro@barijho.com',
     image: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400&h=300&fit=crop',
+    opening_time: '08:00',
+    closing_time: '00:00',
     is_active: true,
     order: 1,
     created_at: new Date().toISOString(),
@@ -39,6 +41,8 @@ const initialBranches: Branch[] = [
     phone: '+54 11 2345-6789',
     email: 'norte@barijho.com',
     image: 'https://images.unsplash.com/photo-1552566626-52f8b828add9?w=400&h=300&fit=crop',
+    opening_time: '09:00',
+    closing_time: '23:00',
     is_active: true,
     order: 2,
     created_at: new Date().toISOString(),
@@ -51,6 +55,8 @@ const initialBranches: Branch[] = [
     phone: '+54 11 3456-7890',
     email: 'sur@barijho.com',
     image: 'https://images.unsplash.com/photo-1466978913421-dad2ebd01d17?w=400&h=300&fit=crop',
+    opening_time: '10:00',
+    closing_time: '22:00',
     is_active: true,
     order: 3,
     created_at: new Date().toISOString(),
@@ -63,6 +69,8 @@ const initialBranches: Branch[] = [
     phone: '+54 11 4567-8901',
     email: 'este@barijho.com',
     image: 'https://images.unsplash.com/photo-1559329007-40df8a9345d8?w=400&h=300&fit=crop',
+    opening_time: '11:00',
+    closing_time: '23:30',
     is_active: true,
     order: 4,
     created_at: new Date().toISOString(),
@@ -141,6 +149,15 @@ export const useBranchStore = create<BranchState>()(
         // Version 3: Reset selectedBranchId to null (no default selection)
         if (version < 3) {
           state.selectedBranchId = null
+        }
+
+        // Version 4: Add opening_time and closing_time fields
+        if (version < 4) {
+          state.branches = state.branches.map((branch) => ({
+            ...branch,
+            opening_time: branch.opening_time ?? BRANCH_DEFAULT_OPENING_TIME,
+            closing_time: branch.closing_time ?? BRANCH_DEFAULT_CLOSING_TIME,
+          }))
         }
 
         return state

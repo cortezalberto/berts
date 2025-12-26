@@ -11,20 +11,50 @@ export const STORAGE_KEYS = {
   ALLERGENS: 'dashboard-allergens',
   PROMOTIONS: 'dashboard-promotions',
   PROMOTION_TYPES: 'dashboard-promotion-types',
+  TABLES: 'dashboard-tables',
+  ORDER_HISTORY: 'dashboard-order-history',
 } as const
 
 // Store versions for migration support
 // Increment when changing data structure to trigger migration
 export const STORE_VERSIONS = {
   RESTAURANT: 1,
-  BRANCHES: 3,
+  BRANCHES: 4,          // v4: Added opening_time and closing_time fields
   CATEGORIES: 3,
   SUBCATEGORIES: 3,
   PRODUCTS: 5,
   ALLERGENS: 2,       // v2: Non-destructive merge
   PROMOTIONS: 3,      // v3: Non-destructive merge
   PROMOTION_TYPES: 2, // v2: Non-destructive merge
+  TABLES: 6,          // v6: pedido_cumplido keeps order_time from solicito_pedido
+  ORDER_HISTORY: 1,   // v1: Initial version
 } as const
+
+// Table status labels for UI display
+export const TABLE_STATUS_LABELS: Record<string, string> = {
+  libre: 'Libre',
+  solicito_pedido: 'Solicito Pedido',
+  pedido_cumplido: 'Pedido Cumplido',
+  cuenta_solicitada: 'Cuenta Solicitada',
+  ocupada: 'Ocupada',
+} as const
+
+// Common table sectors
+export const TABLE_SECTORS = [
+  'Interior',
+  'Terraza',
+  'VIP',
+  'Barra',
+  'Jardin',
+  'Salon Principal',
+] as const
+
+// Default time for table (00:00 when libre/ocupada, or close_time when solicito_pedido)
+export const TABLE_DEFAULT_TIME = '00:00' as const
+
+// Default branch operating hours
+export const BRANCH_DEFAULT_OPENING_TIME = '09:00' as const
+export const BRANCH_DEFAULT_CLOSING_TIME = '23:00' as const
 
 // Currency and locale settings
 export const LOCALE = {
@@ -36,6 +66,7 @@ export const LOCALE = {
 export const PATTERNS = {
   SLUG: /^[a-z0-9-]+$/,
   EMAIL: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+  TIME: /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/,  // HH:mm format (00:00 - 23:59)
 } as const
 
 // Default values

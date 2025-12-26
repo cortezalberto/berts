@@ -7,6 +7,7 @@ interface ImageUploadProps {
   onChange: (url: string) => void
   label?: string
   error?: string
+  disabled?: boolean
 }
 
 // Allowed protocols for image URLs (security: prevent javascript: and data: XSS)
@@ -38,6 +39,7 @@ export function ImageUpload({
   onChange,
   label,
   error,
+  disabled = false,
 }: ImageUploadProps) {
   const [inputUrl, setInputUrl] = useState('')
   const [showInput, setShowInput] = useState(false)
@@ -86,17 +88,19 @@ export function ImageUpload({
               onError={() => setImageError(true)}
             />
           )}
-          <button
-            type="button"
-            onClick={() => {
-              handleRemove()
-              setImageError(false)
-            }}
-            className="absolute top-2 right-2 p-1.5 bg-red-600 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-            aria-label="Eliminar imagen"
-          >
-            <X className="w-4 h-4 text-white" aria-hidden="true" />
-          </button>
+          {!disabled && (
+            <button
+              type="button"
+              onClick={() => {
+                handleRemove()
+                setImageError(false)
+              }}
+              className="absolute top-2 right-2 p-1.5 bg-red-600 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+              aria-label="Eliminar imagen"
+            >
+              <X className="w-4 h-4 text-white" aria-hidden="true" />
+            </button>
+          )}
         </div>
       ) : showInput ? (
         <div className="space-y-2">
@@ -109,7 +113,7 @@ export function ImageUpload({
                 setUrlError('')
               }}
               placeholder="https://example.com/image.jpg"
-              className={`flex-1 px-3 py-2 bg-zinc-800 border rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-orange-500 ${
+              className={`flex-1 px-3 py-2 bg-zinc-800 border rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-orange-500 disabled:opacity-50 disabled:cursor-not-allowed ${
                 urlError ? 'border-red-500' : 'border-zinc-700'
               }`}
               onKeyDown={(e) => {
@@ -119,8 +123,9 @@ export function ImageUpload({
                 }
               }}
               aria-describedby={urlError ? 'url-error' : undefined}
+              disabled={disabled}
             />
-            <Button type="button" onClick={handleUrlSubmit}>
+            <Button type="button" onClick={handleUrlSubmit} disabled={disabled}>
               Agregar
             </Button>
             <Button
@@ -145,14 +150,16 @@ export function ImageUpload({
         <button
           type="button"
           onClick={() => setShowInput(true)}
+          disabled={disabled}
           className={`
             w-full h-40 flex flex-col items-center justify-center gap-2
             border-2 border-dashed rounded-lg
             transition-colors duration-200
+            disabled:opacity-50 disabled:cursor-not-allowed
             ${
               error
                 ? 'border-red-500 bg-red-500/5'
-                : 'border-zinc-700 bg-zinc-800/50 hover:border-zinc-600 hover:bg-zinc-800'
+                : 'border-zinc-700 bg-zinc-800/50 hover:border-zinc-600 hover:bg-zinc-800 disabled:hover:border-zinc-700 disabled:hover:bg-zinc-800/50'
             }
           `}
         >

@@ -19,6 +19,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
   ) => {
     const generatedId = useId()
     const selectId = id || generatedId
+    const errorId = `${selectId}-error`
 
     return (
       <div className="w-full">
@@ -33,6 +34,8 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
         <select
           ref={ref}
           id={selectId}
+          aria-invalid={error ? 'true' : undefined}
+          aria-describedby={error ? errorId : undefined}
           className={`
             w-full px-3 py-2
             bg-zinc-800 border rounded-lg
@@ -56,7 +59,11 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
             </option>
           ))}
         </select>
-        {error && <p className="mt-1 text-sm text-red-500">{error}</p>}
+        {error && (
+          <p id={errorId} className="mt-1 text-sm text-red-500" role="alert">
+            {error}
+          </p>
+        )}
       </div>
     )
   }

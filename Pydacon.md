@@ -48,6 +48,8 @@ class Branch(BaseModel):
     name: str
     restaurant_id: str
     order: int
+    opening_time: str = Field(description="Horario de apertura (HH:mm)", default="09:00")
+    closing_time: str = Field(description="Horario de cierre (HH:mm)", default="23:00")
     address: Optional[str] = None
     phone: Optional[str] = None
     email: Optional[str] = None
@@ -61,6 +63,8 @@ class BranchFormData(BaseModel):
     name: str
     is_active: bool
     order: int
+    opening_time: str = Field(description="Horario de apertura (HH:mm)", pattern=r"^([01]?[0-9]|2[0-3]):[0-5][0-9]$")
+    closing_time: str = Field(description="Horario de cierre (HH:mm)", pattern=r"^([01]?[0-9]|2[0-3]):[0-5][0-9]$")
     address: Optional[str] = None
     phone: Optional[str] = None
     email: Optional[str] = None
@@ -297,4 +301,113 @@ class PromotionFormData(BaseModel):
     is_active: bool
     description: Optional[str] = None
     image: Optional[str] = None
+
+
+# ============================================
+# Table types (mesas)
+# ============================================
+
+class TableStatus(str, Enum):
+    LIBRE = 'libre'
+    SOLICITO_PEDIDO = 'solicito_pedido'
+    PEDIDO_CUMPLIDO = 'pedido_cumplido'
+    CUENTA_SOLICITADA = 'cuenta_solicitada'
+    OCUPADA = 'ocupada'
+
+
+class RestaurantTable(BaseModel):
+    """
+    Mesa de restaurante vinculada a una sucursal para gestionar ordenes y pedidos.
+
+    Reglas de tiempo por estado:
+    - libre: order_time=00:00, close_time=00:00
+    - ocupada: order_time=00:00, close_time=00:00
+    - solicito_pedido: order_time=HH:mm (hora del pedido), close_time=00:00
+    - pedido_cumplido: order_time=00:00, close_time=00:00
+    - cuenta_solicitada: order_time=HH:mm, close_time=HH:mm (close_time >= order_time)
+    """
+    id: str
+    branch_id: str
+    number: int = Field(description="Numero identificador de mesa dentro de la sucursal")
+    capacity: int = Field(description="Cantidad maxima de comensales", ge=1, le=50)
+    sector: str = Field(description="Sector de ubicacion (ej: Interior, Terraza, VIP, Barra)")
+    status: TableStatus = Field(description="Estado actual de la mesa para seguimiento de pedidos")
+    order_time: str = Field(description="Hora del primer pedido (HH:mm), '00:00' excepto en solicito_pedido y cuenta_solicitada", default="00:00")
+    close_time: str = Field(description="Hora de cierre (HH:mm), solo tiene valor en cuenta_solicitada", default="00:00")
+    is_active: Optional[bool] = None
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
+
+
+class RestaurantTableFormData(BaseModel):
+    branch_id: str
+    number: int = Field(ge=1)
+    capacity: int = Field(ge=1, le=50)
+    sector: str
+    status: TableStatus
+    order_time: str = Field(description="Hora del primer pedido (HH:mm)", pattern=r"^([01]?[0-9]|2[0-3]):[0-5][0-9]$")
+    close_time: str = Field(description="Hora de cierre (HH:mm)", pattern=r"^([01]?[0-9]|2[0-3]):[0-5][0-9]$")
+    is_active: bool
+
+
+# ============================================
+# Order History types (historial de ventas)
+# ============================================
+
+class CommandStatus(str, Enum):
+    PENDIENTE = 'pendiente'
+    EN_PREPARACION = 'en_preparacion'
+    LISTO = 'listo'
+    ENTREGADO = 'entregado'
+
+
+class OrderHistoryStatus(str, Enum):
+    ABIERTA = 'abierta'
+    CERRADA = 'cerrada'
+
+
+class OrderCommandItem(BaseModel):
+    """Producto en una comanda."""
+    product_id: str
+    product_name: str = Field(description="Snapshot del nombre al momento del pedido")
+    quantity: int = Field(ge=1)
+    unit_price: float = Field(description="Precio unitario al momento del pedido", ge=0)
+    notes: Optional[str] = Field(description="Notas especiales (sin sal, bien cocido, etc.)", default=None)
+
+
+class OrderCommand(BaseModel):
+    """Comanda individual con lista de productos."""
+    id: str
+    order_history_id: str = Field(description="Referencia al historial de la mesa")
+    items: List[OrderCommandItem]
+    subtotal: float = Field(description="Suma de (quantity * unit_price)", ge=0)
+    created_at: str
+    status: CommandStatus = Field(default=CommandStatus.PENDIENTE)
+
+
+class OrderHistory(BaseModel):
+    """
+    Registro historico de ventas por mesa/fecha.
+    Una mesa puede tener multiples comandas durante una sesion (mientras esta ocupada).
+    """
+    id: str
+    branch_id: str
+    table_id: str
+    table_number: int = Field(description="Snapshot del numero de mesa")
+    date: str = Field(description="Fecha YYYY-MM-DD")
+    staff_id: Optional[str] = Field(description="ID del mozo que atendio", default=None)
+    staff_name: Optional[str] = Field(description="Nombre del mozo (snapshot)", default=None)
+    commands: List[OrderCommand] = Field(description="Lista de comandas de esta sesion", default=[])
+    order_time: str = Field(description="Hora del primer pedido (HH:mm)")
+    close_time: Optional[str] = Field(description="Hora de cierre (HH:mm), null si aun abierta", default=None)
+    total: float = Field(description="Suma de subtotales de todas las comandas", ge=0, default=0)
+    status: OrderHistoryStatus = Field(default=OrderHistoryStatus.ABIERTA)
+    created_at: str
+    updated_at: Optional[str] = None
+
+
+class OrderCommandFormData(BaseModel):
+    """Datos para crear una nueva comanda."""
+    items: List[OrderCommandItem]
+    notes: Optional[str] = None
 ```

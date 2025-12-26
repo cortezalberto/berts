@@ -22,6 +22,9 @@ import {
   UtensilsCrossed,
   Megaphone,
   ShoppingCart,
+  BarChart3,
+  TrendingUp,
+  History,
 } from 'lucide-react'
 import { useBranchStore, selectSelectedBranchId, selectBranchById } from '../../stores/branchStore'
 
@@ -89,6 +92,21 @@ const navigation: NavigationItem[] = [
       { name: 'Precios', href: '/prices', icon: DollarSign },
       { name: 'Tipos de Promo', href: '/promotion-types', icon: Tags },
       { name: 'Promociones', href: '/promotions', icon: Percent },
+    ],
+  },
+  {
+    name: 'Estadisticas',
+    icon: BarChart3,
+    children: [
+      { name: 'Ventas', href: '/statistics/sales', icon: TrendingUp },
+      {
+        name: 'Historial',
+        icon: History,
+        children: [
+          { name: 'Sucursales', href: '/statistics/history/branches', icon: GitBranch },
+          { name: 'Clientes', href: '/statistics/history/customers', icon: Users },
+        ],
+      },
     ],
   },
 ]

@@ -236,6 +236,107 @@ export const helpContent: Record<string, ReactNode> = {
     </div>
   ),
 
+  tables: (
+    <div className="space-y-4 text-zinc-300">
+      <p className="text-lg font-medium text-white">Gestion de Mesas</p>
+      <p>
+        Administra las mesas de cada sucursal. Las mesas estan vinculadas a las ordenes de pedido y rondas de servicio.
+      </p>
+      <ul className="list-disc list-inside space-y-2 ml-4">
+        <li><strong>Crear mesa:</strong> Selecciona una sucursal y agrega nuevas mesas con numero, capacidad y sector.</li>
+        <li><strong>Numero de mesa:</strong> Identificador unico dentro de cada sucursal.</li>
+        <li><strong>Capacidad:</strong> Cantidad maxima de comensales que puede recibir la mesa.</li>
+        <li><strong>Sector:</strong> Ubicacion dentro del local (Interior, Terraza, VIP, Barra, etc.).</li>
+        <li><strong>Estado:</strong> Controla el estado actual de la mesa (Libre, Solicito Pedido, Pedido Cumplido, Ocupada).</li>
+        <li><strong>Filtrar:</strong> Usa el filtro para ver mesas de una sucursal especifica.</li>
+      </ul>
+      <div className="bg-zinc-800 p-4 rounded-lg mt-4">
+        <p className="text-orange-400 font-medium">Estados de mesa:</p>
+        <ul className="text-sm mt-2 space-y-1">
+          <li><strong>Libre:</strong> Mesa disponible para nuevos clientes.</li>
+          <li><strong>Solicito Pedido:</strong> Cliente esperando para ordenar.</li>
+          <li><strong>Pedido Cumplido:</strong> Pedido entregado, cliente consumiendo.</li>
+          <li><strong>Ocupada:</strong> Mesa en uso.</li>
+        </ul>
+      </div>
+      <div className="bg-red-900/50 p-4 rounded-lg mt-2 border border-red-700">
+        <p className="text-red-400 font-medium">Importante:</p>
+        <p className="text-sm mt-1">
+          Las mesas estan vinculadas a las ordenes de pedido. Antes de eliminar una mesa, asegurate de que no tenga ordenes pendientes.
+        </p>
+      </div>
+    </div>
+  ),
+
+  sales: (
+    <div className="space-y-4 text-zinc-300">
+      <p className="text-lg font-medium text-white">Estadisticas de Ventas</p>
+      <p>
+        Visualiza y analiza las ventas de tu restaurante por sucursal y periodo de tiempo.
+      </p>
+      <ul className="list-disc list-inside space-y-2 ml-4">
+        <li><strong>Resumen general:</strong> Ve el total de ventas, promedio por dia y comparativas.</li>
+        <li><strong>Filtrar por sucursal:</strong> Selecciona una sucursal especifica o ve datos consolidados.</li>
+        <li><strong>Rango de fechas:</strong> Define el periodo a analizar (dia, semana, mes, personalizado).</li>
+        <li><strong>Graficos:</strong> Visualiza tendencias con graficos de linea y barras.</li>
+        <li><strong>Productos mas vendidos:</strong> Identifica los productos estrella de cada sucursal.</li>
+      </ul>
+      <div className="bg-zinc-800 p-4 rounded-lg mt-4">
+        <p className="text-orange-400 font-medium">Consejo:</p>
+        <p className="text-sm mt-1">
+          Usa las estadisticas de ventas para identificar horarios pico, productos populares
+          y oportunidades de mejora en tu menu.
+        </p>
+      </div>
+    </div>
+  ),
+
+  historyBranches: (
+    <div className="space-y-4 text-zinc-300">
+      <p className="text-lg font-medium text-white">Historial por Sucursales</p>
+      <p>
+        Consulta el historial completo de ordenes y actividad de cada sucursal.
+      </p>
+      <ul className="list-disc list-inside space-y-2 ml-4">
+        <li><strong>Seleccionar sucursal:</strong> Elige la sucursal para ver su historial.</li>
+        <li><strong>Historial de ordenes:</strong> Ve todas las ordenes procesadas con detalles.</li>
+        <li><strong>Filtrar por fecha:</strong> Busca ordenes de un dia o rango especifico.</li>
+        <li><strong>Estado de mesas:</strong> Revisa el historial de ocupacion de mesas.</li>
+        <li><strong>Comandas:</strong> Consulta el detalle de cada comanda procesada.</li>
+      </ul>
+      <div className="bg-zinc-800 p-4 rounded-lg mt-4">
+        <p className="text-orange-400 font-medium">Uso tipico:</p>
+        <p className="text-sm mt-1">
+          Usa este historial para revisar ordenes pasadas, resolver disputas con clientes
+          o analizar el rendimiento operativo de cada sucursal.
+        </p>
+      </div>
+    </div>
+  ),
+
+  historyCustomers: (
+    <div className="space-y-4 text-zinc-300">
+      <p className="text-lg font-medium text-white">Historial de Clientes</p>
+      <p>
+        Visualiza el historial de visitas y consumo de tus clientes frecuentes.
+      </p>
+      <ul className="list-disc list-inside space-y-2 ml-4">
+        <li><strong>Clientes frecuentes:</strong> Identifica a tus clientes mas leales.</li>
+        <li><strong>Historial de visitas:</strong> Ve cuando y que ordenaron en cada visita.</li>
+        <li><strong>Preferencias:</strong> Conoce los productos favoritos de cada cliente.</li>
+        <li><strong>Gasto promedio:</strong> Analiza el ticket promedio por cliente.</li>
+        <li><strong>Tendencias:</strong> Identifica patrones de consumo y frecuencia.</li>
+      </ul>
+      <div className="bg-zinc-800 p-4 rounded-lg mt-4">
+        <p className="text-orange-400 font-medium">Programa de fidelidad:</p>
+        <p className="text-sm mt-1">
+          Usa esta informacion para crear programas de fidelidad, ofertas personalizadas
+          y mejorar la experiencia de tus clientes frecuentes.
+        </p>
+      </div>
+    </div>
+  ),
+
   settings: (
     <div className="space-y-4 text-zinc-300">
       <p className="text-lg font-medium text-white">Configuracion</p>
