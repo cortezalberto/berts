@@ -410,21 +410,6 @@ export function TablesPage() {
             >
               <Pencil className="w-4 h-4" aria-hidden="true" />
             </Button>
-            {item.status === 'cuenta_solicitada' && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  handleArchive(item)
-                }}
-                className="text-blue-500 hover:text-blue-400 hover:bg-blue-500/10"
-                aria-label={`Archivar mesa ${item.number} en historial`}
-                title="Archivar en historial de ventas"
-              >
-                <Archive className="w-4 h-4" aria-hidden="true" />
-              </Button>
-            )}
             <Button
               variant="ghost"
               size="sm"
@@ -437,6 +422,21 @@ export function TablesPage() {
             >
               <Trash2 className="w-4 h-4" aria-hidden="true" />
             </Button>
+            {item.status === 'cuenta_solicitada' && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleArchive(item)
+                }}
+                className="text-green-500 hover:text-green-400 hover:bg-green-500/10"
+                aria-label={`Liberar mesa ${item.number}`}
+                title="Liberar mesa y archivar en historial"
+              >
+                <Archive className="w-4 h-4" aria-hidden="true" />
+              </Button>
+            )}
           </div>
         ),
       },
