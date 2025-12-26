@@ -97,7 +97,7 @@ export interface Product {
   price: number                    // Base price (used when use_branch_prices is false)
   branch_prices: BranchPrice[]     // Per-branch pricing
   use_branch_prices: boolean       // Toggle for per-branch pricing mode
-  image: string
+  image?: string                   // Optional image URL
   category_id: string
   subcategory_id: string
   featured: boolean
@@ -134,7 +134,7 @@ export interface ProductFormData {
   price: number                    // Base price
   branch_prices: BranchPrice[]     // Per-branch pricing
   use_branch_prices: boolean       // Toggle for per-branch pricing mode
-  image: string
+  image?: string                   // Optional image URL
   category_id: string
   subcategory_id: string
   featured: boolean
@@ -235,9 +235,9 @@ export interface Promotion {
 
 export interface PromotionFormData {
   name: string
-  description: string
+  description?: string             // Optional, matches Promotion interface
   price: number
-  image: string
+  image?: string                   // Optional, matches Promotion interface
   start_date: string
   end_date: string
   start_time: string

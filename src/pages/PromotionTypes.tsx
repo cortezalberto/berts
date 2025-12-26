@@ -113,7 +113,15 @@ export function PromotionTypesPage() {
     if (!selectedType) return
 
     try {
-      // Limpiar referencias del tipo en promociones existentes
+      // Validate promotion type exists before delete
+      const typeExists = promotionTypes.some((pt) => pt.id === selectedType.id)
+      if (!typeExists) {
+        toast.error('El tipo de promocion ya no existe')
+        setIsDeleteOpen(false)
+        return
+      }
+
+      // Delete promotions that use this type first, then delete the type
       clearPromotionType(selectedType.id)
       deletePromotionType(selectedType.id)
       toast.success('Tipo de promocion eliminado correctamente')
@@ -122,7 +130,7 @@ export function PromotionTypesPage() {
       const message = handleError(error, 'PromotionTypesPage.handleDelete')
       toast.error(`Error al eliminar el tipo de promocion: ${message}`)
     }
-  }, [selectedType, clearPromotionType, deletePromotionType])
+  }, [selectedType, promotionTypes, clearPromotionType, deletePromotionType])
 
   const columns: TableColumn<PromotionType>[] = useMemo(
     () => [
@@ -324,7 +332,7 @@ export function PromotionTypesPage() {
         onClose={() => setIsDeleteOpen(false)}
         onConfirm={handleDelete}
         title="Eliminar Tipo de Promocion"
-        message={`¿Estas seguro de eliminar "${selectedType?.name}"? Las promociones que usen este tipo no seran afectadas.`}
+        message={`¿Estas seguro de eliminar "${selectedType?.name}"? Las promociones que usen este tipo tambien seran eliminadas.`}
         confirmLabel="Eliminar"
       />
     </PageContainer>

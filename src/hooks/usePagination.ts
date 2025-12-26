@@ -1,4 +1,7 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useRef, useLayoutEffect } from 'react'
+
+// Default items per page - can be overridden via options
+const DEFAULT_ITEMS_PER_PAGE = 10
 
 interface UsePaginationOptions {
   itemsPerPage?: number
@@ -21,18 +24,32 @@ export function usePagination<T>(
   items: T[],
   options: UsePaginationOptions = {}
 ): UsePaginationResult<T> {
-  const { itemsPerPage = 10 } = options
+  const { itemsPerPage = DEFAULT_ITEMS_PER_PAGE } = options
   const [currentPage, setCurrentPageInternal] = useState(1)
 
   const totalItems = items.length
   const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage))
 
-  // Calculate safe page - auto-correct if current exceeds total after filtering
-  // Using Math.min/max to ensure page is always valid without needing effect
-  const safePage = useMemo(() => {
-    if (currentPage > totalPages) {
-      return 1
+  // Use ref to track if we're resetting to prevent loops
+  const isResettingRef = useRef(false)
+
+  // Auto-reset to page 1 when current page exceeds total pages (e.g., after filtering)
+  // Use useLayoutEffect to reset before paint, preventing flash of empty content
+  useLayoutEffect(() => {
+    if (currentPage > totalPages && !isResettingRef.current) {
+      isResettingRef.current = true
+      // Use functional update to avoid calling setState synchronously within effect
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setCurrentPageInternal(1)
+      // Reset flag after state update
+      requestAnimationFrame(() => {
+        isResettingRef.current = false
+      })
     }
+  }, [currentPage, totalPages])
+
+  // Calculate safe page for current render
+  const safePage = useMemo(() => {
     return Math.max(1, Math.min(currentPage, totalPages))
   }, [currentPage, totalPages])
 

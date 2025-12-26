@@ -21,6 +21,8 @@ interface PromotionState {
 const generateId = () => crypto.randomUUID()
 
 // Initial promotions mock data
+// Product IDs reference actual products from productStore:
+// Branch 1: '1'-'14' (e.g., '3' = Hamburguesa Clasica, '11' = Hamburguesa BBQ, '7' = Cerveza Artesanal)
 const initialPromotions: Promotion[] = [
   {
     id: 'promo-1',
@@ -28,14 +30,14 @@ const initialPromotions: Promotion[] = [
     description: '4 hamburguesas + 2 papas grandes + 4 bebidas',
     price: 15000,
     start_date: '2024-01-01',
-    end_date: '2024-12-31',
+    end_date: '2025-12-31',
     start_time: '11:00',
     end_time: '23:00',
     promotion_type_id: 'promo-type-2',
     branch_ids: ['branch-1', 'branch-2', 'branch-3', 'branch-4'],
     items: [
-      { product_id: 'b1-prod-1', quantity: 4 },
-      { product_id: 'b1-prod-2', quantity: 2 },
+      { product_id: '3', quantity: 4 },   // Hamburguesa Clasica
+      { product_id: '11', quantity: 2 },  // Hamburguesa BBQ
     ],
     is_active: true,
     created_at: new Date().toISOString(),
@@ -47,14 +49,14 @@ const initialPromotions: Promotion[] = [
     description: 'Promocion de cerveza en horario especial',
     price: 5000,
     start_date: '2024-06-01',
-    end_date: '2024-08-31',
+    end_date: '2025-08-31',
     start_time: '17:00',
     end_time: '20:00',
     promotion_type_id: 'promo-type-1',
     branch_ids: ['branch-2'],
     items: [
-      { product_id: 'b1-prod-1', quantity: 1 },
-      { product_id: 'b1-prod-2', quantity: 1 },
+      { product_id: '7', quantity: 2 },   // Cerveza Artesanal
+      { product_id: '12', quantity: 1 },  // Mojito Clasico
     ],
     is_active: true,
     created_at: new Date().toISOString(),
@@ -116,11 +118,13 @@ export const usePromotionStore = create<PromotionState>()(
 
       removeProductFromPromotions: (productId) =>
         set((state) => ({
-          // Remove product from promotion items, keep promotion even if empty
-          promotions: state.promotions.map((promo) => ({
-            ...promo,
-            items: promo.items.filter((item) => item.product_id !== productId),
-          })),
+          // Remove product from promotion items, delete promotion if no items remain
+          promotions: state.promotions
+            .map((promo) => ({
+              ...promo,
+              items: promo.items.filter((item) => item.product_id !== productId),
+            }))
+            .filter((promo) => promo.items.length > 0),
         })),
 
       getByBranch: (branchId) => {
@@ -134,6 +138,13 @@ export const usePromotionStore = create<PromotionState>()(
       version: STORE_VERSIONS.PROMOTIONS,
       migrate: (persistedState, version) => {
         const state = persistedState as { promotions: Promotion[] }
+
+        // Ensure promotions array exists
+        if (!Array.isArray(state.promotions)) {
+          state.promotions = initialPromotions
+          return state
+        }
+
         if (version < 2) {
           // Migration: Add start_time, end_time, promotion_type_id to existing promotions
           state.promotions = state.promotions.map((p) => ({
@@ -143,6 +154,14 @@ export const usePromotionStore = create<PromotionState>()(
             promotion_type_id: p.promotion_type_id ?? '',
           }))
         }
+
+        // Version 3: Non-destructive merge - only add missing initial promotions
+        if (version < 3) {
+          const existingIds = new Set(state.promotions.map(p => p.id))
+          const missingPromotions = initialPromotions.filter(p => !existingIds.has(p.id))
+          state.promotions = [...state.promotions, ...missingPromotions]
+        }
+
         return state
       },
     }

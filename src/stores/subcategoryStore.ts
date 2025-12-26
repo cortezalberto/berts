@@ -255,10 +255,20 @@ export const useSubcategoryStore = create<SubcategoryState>()(
       version: STORE_VERSIONS.SUBCATEGORIES,
       migrate: (persistedState, version) => {
         const state = persistedState as { subcategories: Subcategory[] }
-        // Version 3: Reset a datos iniciales con category_ids correctos
-        if (version < 3) {
+
+        // Validate array exists
+        if (!Array.isArray(state.subcategories)) {
           state.subcategories = initialSubcategories
+          return state
         }
+
+        // Version 3: Non-destructive merge - only add missing initial subcategories
+        if (version < 3) {
+          const existingIds = new Set(state.subcategories.map(s => s.id))
+          const missingSubcategories = initialSubcategories.filter(s => !existingIds.has(s.id))
+          state.subcategories = [...state.subcategories, ...missingSubcategories]
+        }
+
         return state
       },
     }

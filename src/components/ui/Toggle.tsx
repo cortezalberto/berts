@@ -1,4 +1,4 @@
-import { type InputHTMLAttributes, forwardRef } from 'react'
+import { type InputHTMLAttributes, forwardRef, useId } from 'react'
 
 interface ToggleProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'type'> {
   label?: string
@@ -6,7 +6,8 @@ interface ToggleProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'type'
 
 export const Toggle = forwardRef<HTMLInputElement, ToggleProps>(
   ({ label, className = '', id, ...props }, ref) => {
-    const toggleId = id || label?.toLowerCase().replace(/\s+/g, '-')
+    const generatedId = useId()
+    const toggleId = id || generatedId
 
     return (
       <label

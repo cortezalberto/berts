@@ -1,4 +1,4 @@
-import { type SelectHTMLAttributes, forwardRef } from 'react'
+import { type SelectHTMLAttributes, forwardRef, useId } from 'react'
 
 interface SelectOption {
   value: string
@@ -17,7 +17,8 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
     { label, error, options, placeholder, className = '', id, ...props },
     ref
   ) => {
-    const selectId = id || label?.toLowerCase().replace(/\s+/g, '-')
+    const generatedId = useId()
+    const selectId = id || generatedId
 
     return (
       <div className="w-full">

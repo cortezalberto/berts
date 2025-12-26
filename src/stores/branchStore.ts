@@ -22,7 +22,7 @@ const initialBranches: Branch[] = [
   {
     id: 'branch-1',
     name: 'Barijho Centro',
-    restaurant_id: 'barijho-main',
+    restaurant_id: 'restaurant-1',
     address: 'Av. Corrientes 1234, CABA',
     phone: '+54 11 1234-5678',
     email: 'centro@barijho.com',
@@ -34,7 +34,7 @@ const initialBranches: Branch[] = [
   {
     id: 'branch-2',
     name: 'Barijho Norte',
-    restaurant_id: 'barijho-main',
+    restaurant_id: 'restaurant-1',
     address: 'Av. Cabildo 2345, CABA',
     phone: '+54 11 2345-6789',
     email: 'norte@barijho.com',
@@ -46,7 +46,7 @@ const initialBranches: Branch[] = [
   {
     id: 'branch-3',
     name: 'Barijho Sur',
-    restaurant_id: 'barijho-main',
+    restaurant_id: 'restaurant-1',
     address: 'Av. Caseros 3456, CABA',
     phone: '+54 11 3456-7890',
     email: 'sur@barijho.com',
@@ -58,7 +58,7 @@ const initialBranches: Branch[] = [
   {
     id: 'branch-4',
     name: 'Barijho Este',
-    restaurant_id: 'barijho-main',
+    restaurant_id: 'restaurant-1',
     address: 'Av. Santa Fe 4567, CABA',
     phone: '+54 11 4567-8901',
     email: 'este@barijho.com',
@@ -121,15 +121,28 @@ export const useBranchStore = create<BranchState>()(
       version: STORE_VERSIONS.BRANCHES,
       migrate: (persistedState, version) => {
         const state = persistedState as { branches: Branch[]; selectedBranchId: string | null }
-        // Version 2: Reset a datos iniciales para limpiar datos corruptos
-        if (version < 2) {
+
+        // Ensure branches array exists
+        if (!Array.isArray(state.branches)) {
           state.branches = initialBranches
           state.selectedBranchId = null
+          return state
         }
+
+        // Version 2: Merge with initial branches (non-destructive)
+        // Only add initial branches that don't exist in user data
+        if (version < 2) {
+          const existingIds = new Set(state.branches.map(b => b.id))
+          const missingBranches = initialBranches.filter(b => !existingIds.has(b.id))
+          state.branches = [...state.branches, ...missingBranches]
+          state.selectedBranchId = null
+        }
+
         // Version 3: Reset selectedBranchId to null (no default selection)
         if (version < 3) {
           state.selectedBranchId = null
         }
+
         return state
       },
     }

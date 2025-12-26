@@ -356,6 +356,7 @@ export function BranchesPage() {
               setFormData((prev) => ({ ...prev, address: e.target.value }))
             }
             placeholder="Ej: Av. Corrientes 1234, CABA"
+            error={errors.address}
           />
 
           <div className="grid grid-cols-2 gap-4">
@@ -366,6 +367,7 @@ export function BranchesPage() {
                 setFormData((prev) => ({ ...prev, phone: e.target.value }))
               }
               placeholder="Ej: +54 11 1234-5678"
+              error={errors.phone}
             />
 
             <Input
@@ -393,7 +395,7 @@ export function BranchesPage() {
             onChange={(e) =>
               setFormData((prev) => ({
                 ...prev,
-                order: parseInt(e.target.value) || 0,
+                order: parseInt(e.target.value, 10) || 0,
               }))
             }
             min={0}

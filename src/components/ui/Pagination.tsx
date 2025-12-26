@@ -73,7 +73,7 @@ export function Pagination({
           size="sm"
           onClick={() => onPageChange(1)}
           disabled={!canGoPrevious}
-          aria-label="Primera pagina"
+          aria-label="Primera página"
         >
           <ChevronsLeft className="w-4 h-4" aria-hidden="true" />
         </Button>
@@ -84,7 +84,7 @@ export function Pagination({
           size="sm"
           onClick={() => onPageChange(currentPage - 1)}
           disabled={!canGoPrevious}
-          aria-label="Pagina anterior"
+          aria-label="Página anterior"
         >
           <ChevronLeft className="w-4 h-4" aria-hidden="true" />
         </Button>
@@ -106,7 +106,7 @@ export function Pagination({
                 variant={page === currentPage ? 'primary' : 'ghost'}
                 size="sm"
                 onClick={() => onPageChange(page)}
-                aria-label={`Pagina ${page}`}
+                aria-label={`Página ${page}`}
                 aria-current={page === currentPage ? 'page' : undefined}
               >
                 {page}
@@ -121,7 +121,7 @@ export function Pagination({
           size="sm"
           onClick={() => onPageChange(currentPage + 1)}
           disabled={!canGoNext}
-          aria-label="Pagina siguiente"
+          aria-label="Página siguiente"
         >
           <ChevronRight className="w-4 h-4" aria-hidden="true" />
         </Button>
@@ -132,7 +132,7 @@ export function Pagination({
           size="sm"
           onClick={() => onPageChange(totalPages)}
           disabled={!canGoNext}
-          aria-label="Ultima pagina"
+          aria-label="Última página"
         >
           <ChevronsRight className="w-4 h-4" aria-hidden="true" />
         </Button>

@@ -5,6 +5,9 @@ import {
   DashboardPage,
   RestaurantPage,
   BranchesPage,
+  TablesPage,
+  StaffPage,
+  OrdersPage,
   CategoriesPage,
   SubcategoriesPage,
   ProductsPage,
@@ -24,6 +27,9 @@ function App() {
             <Route index element={<DashboardPage />} />
             <Route path="restaurant" element={<RestaurantPage />} />
             <Route path="branches" element={<BranchesPage />} />
+            <Route path="branches/tables" element={<TablesPage />} />
+            <Route path="branches/staff" element={<StaffPage />} />
+            <Route path="branches/orders" element={<OrdersPage />} />
             <Route path="categories" element={<CategoriesPage />} />
             <Route path="subcategories" element={<SubcategoriesPage />} />
             <Route path="products" element={<ProductsPage />} />

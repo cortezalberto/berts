@@ -408,7 +408,7 @@ export const useProductStore = create<ProductState>()(
         set((state) => ({
           products: state.products.map((prod) => ({
             ...prod,
-            allergen_ids: prod.allergen_ids.filter((id) => id !== allergenId),
+            allergen_ids: (prod.allergen_ids ?? []).filter((id) => id !== allergenId),
           })),
         })),
     }),
@@ -417,10 +417,21 @@ export const useProductStore = create<ProductState>()(
       version: STORE_VERSIONS.PRODUCTS,
       migrate: (persistedState, version) => {
         const state = persistedState as { products: Product[] }
-        // Version 4: Reset a datos iniciales con category_ids correctos
-        if (version < 4) {
+
+        // Ensure products array exists
+        if (!Array.isArray(state.products)) {
           state.products = initialProducts
+          return state
         }
+
+        // Version 4: Merge user products with initial products (non-destructive)
+        // Only add initial products that don't exist in user data
+        if (version < 4) {
+          const existingIds = new Set(state.products.map(p => p.id))
+          const missingInitialProducts = initialProducts.filter(p => !existingIds.has(p.id))
+          state.products = [...state.products, ...missingInitialProducts]
+        }
+
         // Version 5: Add branch_prices and use_branch_prices fields
         if (version < 5) {
           state.products = state.products.map(p => ({
@@ -429,6 +440,7 @@ export const useProductStore = create<ProductState>()(
             use_branch_prices: p.use_branch_prices ?? false,
           }))
         }
+
         return state
       },
     }

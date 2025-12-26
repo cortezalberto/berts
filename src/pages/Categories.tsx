@@ -162,12 +162,9 @@ export function CategoriesPage() {
       }
 
       // Cascade delete: products first, then subcategories, then category
-      const subcats = getByCategory(selectedCategory.id)
-      if (subcats.length > 0) {
-        deleteProductsByCategory(selectedCategory.id)
-        deleteSubcategoriesByCategory(selectedCategory.id)
-      }
-
+      // Always delete products and subcategories (even if counts are 0)
+      deleteProductsByCategory(selectedCategory.id)
+      deleteSubcategoriesByCategory(selectedCategory.id)
       deleteCategory(selectedCategory.id)
       toast.success('Categoria eliminada correctamente')
       setIsDeleteOpen(false)
@@ -178,7 +175,6 @@ export function CategoriesPage() {
   }, [
     selectedCategory,
     categories,
-    getByCategory,
     deleteSubcategoriesByCategory,
     deleteProductsByCategory,
     deleteCategory,
@@ -421,7 +417,7 @@ export function CategoriesPage() {
             type="number"
             value={formData.order}
             onChange={(e) =>
-              setFormData((prev) => ({ ...prev, order: parseInt(e.target.value) || 0 }))
+              setFormData((prev) => ({ ...prev, order: parseInt(e.target.value, 10) || 0 }))
             }
             min={0}
           />

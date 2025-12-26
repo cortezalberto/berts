@@ -57,6 +57,7 @@ export function ConfirmDialog({
             className={`w-6 h-6 ${
               variant === 'danger' ? 'text-red-500' : 'text-yellow-500'
             }`}
+            aria-hidden="true"
           />
         </div>
         <p className="text-zinc-300">{message}</p>

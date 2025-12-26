@@ -5,7 +5,7 @@ import type { PromotionType, PromotionTypeFormData } from '../types'
 
 interface PromotionTypeState {
   promotionTypes: PromotionType[]
-  addPromotionType: (data: PromotionTypeFormData) => void
+  addPromotionType: (data: PromotionTypeFormData) => PromotionType
   updatePromotionType: (id: string, data: Partial<PromotionTypeFormData>) => void
   deletePromotionType: (id: string) => void
 }
@@ -50,17 +50,17 @@ export const usePromotionTypeStore = create<PromotionTypeState>()(
     (set) => ({
       promotionTypes: initialPromotionTypes,
 
-      addPromotionType: (data) =>
+      addPromotionType: (data) => {
+        const newPromotionType: PromotionType = {
+          id: crypto.randomUUID(),
+          ...data,
+          created_at: new Date().toISOString(),
+        }
         set((state) => ({
-          promotionTypes: [
-            ...state.promotionTypes,
-            {
-              id: crypto.randomUUID(),
-              ...data,
-              created_at: new Date().toISOString(),
-            },
-          ],
-        })),
+          promotionTypes: [...state.promotionTypes, newPromotionType],
+        }))
+        return newPromotionType
+      },
 
       updatePromotionType: (id, data) =>
         set((state) => ({
@@ -79,6 +79,24 @@ export const usePromotionTypeStore = create<PromotionTypeState>()(
     {
       name: STORAGE_KEYS.PROMOTION_TYPES,
       version: STORE_VERSIONS.PROMOTION_TYPES,
+      migrate: (persistedState, version) => {
+        const state = persistedState as { promotionTypes: PromotionType[] }
+
+        // Ensure promotionTypes array exists
+        if (!Array.isArray(state.promotionTypes)) {
+          state.promotionTypes = initialPromotionTypes
+          return state
+        }
+
+        // Version 2: Non-destructive merge - only add missing initial promotion types
+        if (version < 2) {
+          const existingIds = new Set(state.promotionTypes.map(pt => pt.id))
+          const missingTypes = initialPromotionTypes.filter(pt => !existingIds.has(pt.id))
+          state.promotionTypes = [...state.promotionTypes, ...missingTypes]
+        }
+
+        return state
+      },
     }
   )
 )

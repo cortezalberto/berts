@@ -63,6 +63,7 @@ export function BranchCheckboxes({
             checked={allSelected}
             onChange={handleSelectAll}
             className="w-4 h-4 rounded border-zinc-600 bg-zinc-700 text-orange-500 focus:ring-orange-500 focus:ring-offset-zinc-900"
+            aria-label="Seleccionar todas las sucursales"
           />
           <span className="text-sm font-medium text-white">
             Seleccionar todas las sucursales
@@ -81,6 +82,7 @@ export function BranchCheckboxes({
                 checked={value.includes(branch.id)}
                 onChange={() => handleToggle(branch.id)}
                 className="w-4 h-4 rounded border-zinc-600 bg-zinc-700 text-orange-500 focus:ring-orange-500 focus:ring-offset-zinc-900"
+                aria-label={`Seleccionar ${branch.name}`}
               />
               <div className="flex-1 min-w-0">
                 <span className="text-sm text-zinc-300">{branch.name}</span>

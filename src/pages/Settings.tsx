@@ -2,6 +2,9 @@ import { useRef, useCallback } from 'react'
 import { PageContainer } from '../components/layout'
 import { Card, CardHeader, Button, ConfirmDialog } from '../components/ui'
 import { RefreshCw, Trash2, Download, Upload } from 'lucide-react'
+
+// Maximum file size for import (5MB)
+const MAX_IMPORT_FILE_SIZE = 5 * 1024 * 1024
 import {
   useCategoryStore,
   selectCategories,
@@ -65,7 +68,8 @@ export function SettingsPage() {
         downloadLinkRef.current.href = url
         downloadLinkRef.current.download = `barijho-backup-${new Date().toISOString().split('T')[0]}.json`
         downloadLinkRef.current.click()
-        URL.revokeObjectURL(url)
+        // Delay revoke to ensure download starts
+        setTimeout(() => URL.revokeObjectURL(url), 1000)
       }
 
       toast.success('Datos exportados correctamente')
@@ -79,25 +83,89 @@ export function SettingsPage() {
     fileInputRef.current?.click()
   }, [])
 
+  // Validate object has required string fields
+  const hasRequiredFields = useCallback((obj: unknown, fields: string[]): boolean => {
+    if (!obj || typeof obj !== 'object') return false
+    const record = obj as Record<string, unknown>
+    return fields.every(field => typeof record[field] === 'string' || record[field] === undefined)
+  }, [])
+
+  // Validate imported data structure with deep validation
+  const validateImportData = useCallback((data: unknown): data is {
+    restaurant?: unknown
+    categories?: unknown[]
+    subcategories?: unknown[]
+    products?: unknown[]
+  } => {
+    if (!data || typeof data !== 'object') return false
+    const obj = data as Record<string, unknown>
+
+    // Validate restaurant object structure if present
+    if (obj.restaurant !== undefined) {
+      if (typeof obj.restaurant !== 'object' || obj.restaurant === null) return false
+      const rest = obj.restaurant as Record<string, unknown>
+      if (typeof rest.name !== 'string' || typeof rest.slug !== 'string') return false
+    }
+
+    // Validate categories array and items if present
+    if (obj.categories !== undefined) {
+      if (!Array.isArray(obj.categories)) return false
+      if (!obj.categories.every(item => hasRequiredFields(item, ['id', 'name', 'branch_id']))) return false
+    }
+
+    // Validate subcategories array and items if present
+    if (obj.subcategories !== undefined) {
+      if (!Array.isArray(obj.subcategories)) return false
+      if (!obj.subcategories.every(item => hasRequiredFields(item, ['id', 'name', 'category_id']))) return false
+    }
+
+    // Validate products array and items if present
+    if (obj.products !== undefined) {
+      if (!Array.isArray(obj.products)) return false
+      if (!obj.products.every(item => hasRequiredFields(item, ['id', 'name', 'category_id']))) return false
+    }
+
+    return true
+  }, [hasRequiredFields])
+
   const handleFileChange = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0]
       if (!file) return
 
+      // Validate file size to prevent DoS
+      if (file.size > MAX_IMPORT_FILE_SIZE) {
+        toast.error('Archivo muy grande. El tamaño máximo es 5MB.')
+        return
+      }
+
+      // Validate file type
+      if (!file.name.endsWith('.json')) {
+        toast.error('Solo se permiten archivos .json')
+        return
+      }
+
       try {
         const text = await file.text()
         const data = JSON.parse(text)
 
-        if (data.restaurant) {
+        // Validate structure before importing
+        if (!validateImportData(data)) {
+          toast.error('Archivo invalido: estructura de datos incorrecta')
+          return
+        }
+
+        // Only import valid data
+        if (data.restaurant && typeof data.restaurant === 'object') {
           setRestaurant(data.restaurant)
         }
-        if (data.categories) {
+        if (data.categories && Array.isArray(data.categories)) {
           setCategories(data.categories)
         }
-        if (data.subcategories) {
+        if (data.subcategories && Array.isArray(data.subcategories)) {
           setSubcategories(data.subcategories)
         }
-        if (data.products) {
+        if (data.products && Array.isArray(data.products)) {
           setProducts(data.products)
         }
 
@@ -112,7 +180,7 @@ export function SettingsPage() {
         fileInputRef.current.value = ''
       }
     },
-    [setRestaurant, setCategories, setSubcategories, setProducts]
+    [setRestaurant, setCategories, setSubcategories, setProducts, validateImportData]
   )
 
   const handleResetData = useCallback(() => {

@@ -109,16 +109,29 @@ removeBranchFromPromotions(selectedBranch.id) // Remove from promotions (deletes
 deleteBranch(selectedBranch.id)           // Delete branch
 ```
 
-When deleting allergens, clean orphan references:
+When deleting allergens, clean orphan references first, then delete:
 ```typescript
-removeAllergenFromProducts(allergenId)  // Clean allergen_ids arrays
-deleteAllergen(allergenId)
+// Validate existence first
+const allergenExists = allergens.some((a) => a.id === allergenId)
+if (!allergenExists) return
+
+removeAllergenFromProducts(allergenId)  // Clean allergen_ids arrays FIRST
+deleteAllergen(allergenId)              // Then delete allergen
 ```
 
-When deleting promotion types, promotions using that type are deleted (not just cleared):
+When deleting promotion types, validate existence and delete related promotions:
 ```typescript
+// Validate existence first
+const typeExists = promotionTypes.some((pt) => pt.id === typeId)
+if (!typeExists) return
+
 clearPromotionType(typeId)  // Deletes all promotions with this type
 deletePromotionType(typeId)
+```
+
+When deleting products, promotions that become empty are also deleted:
+```typescript
+removeProductFromPromotions(productId)  // Removes product, deletes empty promotions
 ```
 
 ### Constants and Configuration
@@ -128,6 +141,8 @@ All magic strings and configuration live in `src/utils/constants.ts`:
 - `STORE_VERSIONS` - For Zustand persist migrations (increment when changing data structure)
 - `LOCALE` - Currency (ARS) and language (es-AR)
 - `PATTERNS` - Validation regex patterns
+- `formatPrice(price)` - Centralized price formatter with edge case handling
+- `sanitizeText(text)` - HTML escape for XSS prevention
 
 ### Validation
 Centralized validation in `src/utils/validation.ts`. Always use these validators instead of inline validation:
@@ -151,16 +166,47 @@ catch (error) {
 ### Routing
 Routes nested under Layout component (includes skip link for accessibility):
 - `/` - Dashboard (branch selection)
-- `/branches` - Branch management (CRUD)
 - `/restaurant` - Restaurant settings
-- `/categories` - Category management (branch-scoped)
-- `/subcategories` - Subcategory management (branch-scoped)
-- `/products` - Product management (branch-scoped)
-- `/prices` - Price management (branch-scoped, bulk updates)
-- `/allergens` - Allergen management (global)
-- `/promotion-types` - Promotion types management (global)
-- `/promotions` - Promotions management (multi-branch)
+- **Gestión > Sucursales:**
+  - `/branches` - Branch management (CRUD)
+  - `/branches/tables` - Tables management (placeholder)
+  - `/branches/staff` - Staff management (placeholder)
+  - `/branches/orders` - Orders management (placeholder)
+- **Gestión > Productos:**
+  - `/categories` - Category management (branch-scoped)
+  - `/subcategories` - Subcategory management (branch-scoped)
+  - `/products` - Product/Platos management (branch-scoped)
+  - `/allergens` - Allergen management (global)
+- **Marketing:**
+  - `/prices` - Price management (branch-scoped, bulk updates)
+  - `/promotion-types` - Promotion types management (global)
+  - `/promotions` - Promotions management (multi-branch)
 - `/settings` - App settings
+
+### Sidebar Navigation Structure
+The sidebar uses a hierarchical collapsible navigation defined in `src/components/layout/Sidebar.tsx`:
+```
+Dashboard
+Restaurante
+▸ Gestión (collapsible group)
+  ▸ Sucursales (collapsible subgroup)
+    - Todas → /branches
+    - Mesas → /branches/tables
+    - Personal → /branches/staff
+    - Pedidos → /branches/orders
+  ▸ Productos (collapsible subgroup)
+    - Categorías → /categories
+    - Subcategorías → /subcategories
+    - Platos → /products
+    - Alérgenos → /allergens
+▸ Marketing (collapsible group)
+  - Precios → /prices
+  - Tipos de Promo → /promotion-types
+  - Promociones → /promotions
+Configuración (bottom)
+```
+
+Groups auto-expand when navigating to a child route. State is managed with `openGroups: Record<string, boolean>`.
 
 ### Type System
 Types centralized in `src/types/index.ts`. Data models (Restaurant, Branch, Category, Product, Allergen, PromotionType, Promotion) are separate from form data types (RestaurantFormData, etc.).
@@ -192,12 +238,16 @@ if (!validation.isValid) {
 }
 ```
 
-**Important:** Always use null-safe access for `branch_prices` in render functions:
+**Important:** Always use null-safe access for arrays that may be undefined:
 ```typescript
+// branch_prices
 const branchPrices = item.branch_prices ?? []
 if (!item.use_branch_prices || branchPrices.length === 0) {
   // Show base price
 }
+
+// allergen_ids in store operations
+allergen_ids: (prod.allergen_ids ?? []).filter((id) => id !== allergenId)
 ```
 
 ### Master-Detail Relationships
@@ -290,15 +340,17 @@ Help content is centralized in `src/utils/helpContent.tsx` with entries for: das
 ### Accessibility
 - Modal component includes focus trap via `useFocusTrap` hook
 - Skip link in Layout for keyboard navigation
-- aria-labels on icon-only buttons
+- aria-labels on icon-only buttons (use proper Spanish accents: "página", "notificación")
 - Screen reader text (`sr-only`) in Badge components for status context
 - Table component supports keyboard navigation (Enter/Space) for clickable rows and requires `ariaLabel` prop
 - Loading states include `role="status"` and sr-only text
 - Icons use `aria-hidden="true"` when decorative, `aria-label` when meaningful
 - HelpButton provides contextual help for each page
+- Toast notifications use `role="alert"` and `aria-live` (assertive for errors, polite for others)
+- Form inputs use `useId()` hook for unique IDs (never hardcode IDs)
 
 ### Store Migrations
-When modifying data structure, increment version in `STORE_VERSIONS` and add migrate function:
+When modifying data structure, increment version in `STORE_VERSIONS` and add migrate function. **Always use non-destructive merging** to preserve user data:
 ```typescript
 persist(
   (set, get) => ({ ... }),
@@ -307,9 +359,28 @@ persist(
     version: STORE_VERSIONS.PRODUCTS,
     migrate: (persistedState, version) => {
       const state = persistedState as { products: Product[] }
-      if (version < 2) {
-        state.products = state.products.map(p => ({ ...p, allergen_ids: p.allergen_ids ?? [] }))
+
+      // Validate array exists
+      if (!Array.isArray(state.products)) {
+        state.products = initialProducts
+        return state
       }
+
+      // Non-destructive merge: only add missing initial items
+      if (version < 4) {
+        const existingIds = new Set(state.products.map(p => p.id))
+        const missing = initialProducts.filter(p => !existingIds.has(p.id))
+        state.products = [...state.products, ...missing]
+      }
+
+      // Add new fields with defaults
+      if (version < 5) {
+        state.products = state.products.map(p => ({
+          ...p,
+          newField: p.newField ?? defaultValue,
+        }))
+      }
+
       return state
     },
   }
@@ -326,6 +397,7 @@ toast.error('Error al guardar')
 toast.warning('Advertencia')
 toast.info('Informacion')
 ```
+**Limits:** Maximum 5 toasts displayed simultaneously to prevent memory issues. Oldest toast is removed when limit is reached.
 
 ### Pagination
 All listing pages use the `usePagination` hook with 10 items per page:
@@ -352,7 +424,146 @@ const {
   onPageChange={setCurrentPage}
 />
 ```
-The hook auto-resets to page 1 when filtered data changes.
+The hook auto-resets to page 1 when `currentPage > totalPages` (e.g., after filtering reduces items). Uses `useLayoutEffect` with a ref flag to prevent infinite loops.
+
+### Price Formatting
+Use the centralized `formatPrice` function from `src/utils/constants.ts`:
+```typescript
+import { formatPrice } from '../utils/constants'
+
+// Usage: {formatPrice(item.price)} → "$ 5.000,00"
+// Handles edge cases like NaN and Infinity
+```
+
+### Event Listener Pattern in Modals
+When registering event listeners in useEffect that depend on callback props, use `useRef` and update in a separate effect to avoid setting refs during render:
+```typescript
+// Use ref to avoid re-registering listeners when onClose changes
+const onCloseRef = useRef(onClose)
+
+// Update ref in effect (NOT during render - causes linter error)
+useEffect(() => {
+  onCloseRef.current = onClose
+}, [onClose])
+
+useEffect(() => {
+  const handleEscape = (e: KeyboardEvent) => {
+    if (e.key === 'Escape') onCloseRef.current()
+  }
+
+  if (isOpen) {
+    document.addEventListener('keydown', handleEscape)
+  }
+
+  return () => {
+    document.removeEventListener('keydown', handleEscape)
+  }
+}, [isOpen])  // Only depend on isOpen, not onClose
+```
+
+### Nested Modals
+The Modal component tracks open modal count via `document.body.dataset.modalCount`. This ensures:
+- Body overflow is only restored when the **last** modal closes
+- Nested modals (e.g., confirm dialog inside edit modal) work correctly
+- No scroll restoration bugs when closing inner modals
+
+## Mock Data Structure
+
+All stores contain consistent mock data for development. Key relationships:
+- **Restaurant**: Single restaurant with `id: 'restaurant-1'`
+- **Branches**: 4 branches (`branch-1` to `branch-4`) all linked to `restaurant_id: 'restaurant-1'`
+- **Products**: IDs are simple strings (`'1'` to `'14'` for branch-1 products)
+- **Promotions**: Reference products by their actual IDs (e.g., `product_id: '3'` for Hamburguesa Clasica)
+
+When adding mock data, ensure:
+1. Foreign keys match existing entities (e.g., `restaurant_id` matches the actual restaurant)
+2. Product IDs in promotions reference existing products from productStore
+3. Dates are set to the future for active promotions
+
+## Security Patterns
+
+### File Import Security
+`Settings.tsx` validates imported JSON files:
+```typescript
+// Maximum file size (5MB) to prevent DoS
+const MAX_IMPORT_FILE_SIZE = 5 * 1024 * 1024
+
+// Validate file type and size before processing
+if (file.size > MAX_IMPORT_FILE_SIZE) {
+  toast.error('Archivo muy grande. El tamaño máximo es 5MB.')
+  return
+}
+if (!file.name.endsWith('.json')) {
+  toast.error('Solo se permiten archivos .json')
+  return
+}
+
+// Deep structure validation before importing
+const validateImportData = (data: unknown) => {
+  // Validates restaurant has name/slug
+  // Validates categories have id/name/branch_id
+  // Validates subcategories have id/name/category_id
+  // Validates products have id/name/category_id
+}
+```
+
+### URL Sanitization
+`ImageUpload` component validates URLs to prevent XSS:
+```typescript
+// Only http:// and https:// protocols allowed
+// Blocks javascript:, data:, and other dangerous protocols
+const sanitized = sanitizeImageUrl(inputUrl)
+if (!sanitized) {
+  setUrlError('URL invalida. Usa una URL http:// o https://')
+  return
+}
+```
+
+### Text Sanitization
+Use `sanitizeText()` from constants when rendering user input in contexts where HTML could be interpreted:
+```typescript
+import { sanitizeText } from '../utils/constants'
+const safe = sanitizeText(userInput)  // Escapes &, <, >, ", '
+```
+
+### Validation Consistency
+All validators in `validation.ts` use:
+- `MIN_NAME_LENGTH = 2`, `MAX_NAME_LENGTH = 100` for name fields
+- `MAX_DESCRIPTION_LENGTH = 500`, `MAX_ADDRESS_LENGTH = 200` for text fields
+- `isValidPhone()` for phone validation (accepts formats like +54 11 1234-5678)
+- Local timezone helpers (`getLocalDateString`, `getLocalTimeString`) for date/time comparisons
+- Trimmed input before validation
+- Prices must be > 0 (not just >= 0)
+
+### Number Input Handling
+Always use safe parsing for number inputs to handle edge cases:
+```typescript
+// WRONG: parseFloat can return incorrect values
+onChange={(e) => setPrice(parseFloat(e.target.value) || 0)}
+
+// CORRECT: Handle empty strings and validate
+onChange={(e) => {
+  const value = e.target.value.trim()
+  const parsed = value === '' ? 0 : Number(value)
+  setPrice(isNaN(parsed) ? 0 : Math.max(0, parsed))
+}}
+
+// For parseInt, always specify radix 10
+parseInt(e.target.value, 10) || 0
+```
+
+### Error Message Security
+`handleError()` in `logger.ts` returns user-friendly messages that don't expose internal details:
+```typescript
+// Internal: "TypeError: Cannot read property 'x' of undefined"
+// User sees: "Ocurrió un error. Intenta nuevamente."
+
+// Errors are classified and mapped to safe messages:
+// - network errors → "Error de conexión. Verifica tu internet."
+// - validation errors → "Los datos ingresados no son válidos."
+// - 404 errors → "El recurso solicitado no existe."
+// - auth errors → "No tienes permisos para esta acción."
+```
 
 ## Current State
 
@@ -362,3 +573,5 @@ The hook auto-resets to page 1 when filtered data changes.
 - ErrorBoundary wraps the entire app in App.tsx
 - 12 predefined allergens (Gluten, Lacteos, Huevos, Pescado, Mariscos, Frutos Secos, Soja, Apio, Mostaza, Sesamo, Sulfitos, Altramuces)
 - 4 predefined promotion types (Happy Hour, Combo Familiar, 2x1, Descuento)
+- Tables, Staff, and Orders pages are placeholder stubs under `/branches/*`
+- Store versions: BRANCHES=3, CATEGORIES=3, SUBCATEGORIES=3, PRODUCTS=5, ALLERGENS=2, PROMOTIONS=3, PROMOTION_TYPES=2

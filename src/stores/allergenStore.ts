@@ -138,6 +138,24 @@ export const useAllergenStore = create<AllergenState>()(
     {
       name: STORAGE_KEYS.ALLERGENS,
       version: STORE_VERSIONS.ALLERGENS,
+      migrate: (persistedState, version) => {
+        const state = persistedState as { allergens: Allergen[] }
+
+        // Ensure allergens array exists
+        if (!Array.isArray(state.allergens)) {
+          state.allergens = initialAllergens
+          return state
+        }
+
+        // Version 2: Non-destructive merge - only add missing initial allergens
+        if (version < 2) {
+          const existingIds = new Set(state.allergens.map(a => a.id))
+          const missingAllergens = initialAllergens.filter(a => !existingIds.has(a.id))
+          state.allergens = [...state.allergens, ...missingAllergens]
+        }
+
+        return state
+      },
     }
   )
 )

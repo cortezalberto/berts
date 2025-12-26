@@ -103,7 +103,7 @@ export function ProductSelect({
           type="number"
           min={1}
           value={quantity}
-          onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+          onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value, 10) || 1))}
           className="w-20 px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white text-center focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
           aria-label="Cantidad"
         />
@@ -192,7 +192,7 @@ function ProductItem({
           min={1}
           value={quantity}
           onChange={(e) =>
-            onQuantityChange(Math.max(1, parseInt(e.target.value) || 1))
+            onQuantityChange(Math.max(1, parseInt(e.target.value, 10) || 1))
           }
           className="w-16 px-2 py-1 bg-zinc-700 border border-zinc-600 rounded text-white text-center text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
           aria-label={`Cantidad de ${product.name}`}

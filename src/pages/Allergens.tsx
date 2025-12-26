@@ -122,26 +122,32 @@ export function AllergensPage() {
     if (!selectedAllergen) return
 
     try {
+      // Validate allergen exists before delete
+      const allergenExists = allergens.some((a) => a.id === selectedAllergen.id)
+      if (!allergenExists) {
+        toast.error('El alergeno ya no existe')
+        setIsDeleteOpen(false)
+        return
+      }
+
       const productCount = getProductCount(selectedAllergen.id)
 
-      // Delete allergen first, then clean up product references
-      deleteAllergen(selectedAllergen.id)
-
+      // Clean up product references FIRST, then delete allergen
       if (productCount > 0) {
-        // Clean orphan references from products after successful deletion
         removeAllergenFromProducts(selectedAllergen.id)
         toast.warning(
           `Este alergeno estaba vinculado a ${productCount} producto(s). Se elimino la referencia.`
         )
       }
 
+      deleteAllergen(selectedAllergen.id)
       toast.success('Alergeno eliminado correctamente')
       setIsDeleteOpen(false)
     } catch (error) {
       const message = handleError(error, 'AllergensPage.handleDelete')
       toast.error(`Error al eliminar el alergeno: ${message}`)
     }
-  }, [selectedAllergen, deleteAllergen, getProductCount, removeAllergenFromProducts])
+  }, [selectedAllergen, allergens, deleteAllergen, getProductCount, removeAllergenFromProducts])
 
   const columns: TableColumn<Allergen>[] = useMemo(
     () => [

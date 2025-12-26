@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { Building2 } from 'lucide-react'
 import { PageContainer } from '../components/layout'
 import { Card, CardHeader, Button, Input, Textarea, ImageUpload } from '../components/ui'
-import { useRestaurantStore } from '../stores/restaurantStore'
+import { useRestaurantStore, selectRestaurant } from '../stores/restaurantStore'
 import { toast } from '../stores/toastStore'
 import { validateRestaurant, type ValidationErrors } from '../utils/validation'
 import { handleError } from '../utils/logger'
@@ -10,7 +10,10 @@ import { helpContent } from '../utils/helpContent'
 import type { RestaurantFormData } from '../types'
 
 export function RestaurantPage() {
-  const { restaurant, createRestaurant, updateRestaurant } = useRestaurantStore()
+  // Use selectors to avoid unnecessary re-renders
+  const restaurant = useRestaurantStore(selectRestaurant)
+  const createRestaurant = useRestaurantStore((s) => s.createRestaurant)
+  const updateRestaurant = useRestaurantStore((s) => s.updateRestaurant)
 
   const [formData, setFormData] = useState<RestaurantFormData>({
     name: '',
@@ -199,6 +202,7 @@ export function RestaurantPage() {
               value={formData.address}
               onChange={handleChange}
               placeholder="Calle 123, Ciudad"
+              error={errors.address}
             />
 
             <Input
@@ -207,6 +211,7 @@ export function RestaurantPage() {
               value={formData.phone}
               onChange={handleChange}
               placeholder="+54 11 1234-5678"
+              error={errors.phone}
             />
 
             <Input

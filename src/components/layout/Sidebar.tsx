@@ -14,7 +14,14 @@ import {
   Settings,
   LogOut,
   ChevronDown,
+  ChevronRight,
   ClipboardList,
+  List,
+  LayoutGrid,
+  Users,
+  UtensilsCrossed,
+  Megaphone,
+  ShoppingCart,
 } from 'lucide-react'
 import { useBranchStore, selectSelectedBranchId, selectBranchById } from '../../stores/branchStore'
 
@@ -24,16 +31,26 @@ interface NavItem {
   icon: React.ComponentType<{ className?: string }>
 }
 
-interface NavGroup {
+interface NavSubGroup {
   name: string
   icon: React.ComponentType<{ className?: string }>
   children: NavItem[]
 }
 
+interface NavGroup {
+  name: string
+  icon: React.ComponentType<{ className?: string }>
+  children: (NavItem | NavSubGroup)[]
+}
+
 type NavigationItem = NavItem | NavGroup
 
 function isNavGroup(item: NavigationItem): item is NavGroup {
-  return 'children' in item
+  return 'children' in item && !('href' in item)
+}
+
+function isNavSubGroup(item: NavItem | NavSubGroup): item is NavSubGroup {
+  return 'children' in item && !('href' in item)
 }
 
 const navigation: NavigationItem[] = [
@@ -43,31 +60,93 @@ const navigation: NavigationItem[] = [
     name: 'Gestion',
     icon: ClipboardList,
     children: [
-      { name: 'Sucursales', href: '/branches', icon: GitBranch },
-      { name: 'Categorias', href: '/categories', icon: FolderTree },
-      { name: 'Subcategorias', href: '/subcategories', icon: Layers },
-      { name: 'Productos', href: '/products', icon: Package },
+      {
+        name: 'Sucursales',
+        icon: GitBranch,
+        children: [
+          { name: 'Todas', href: '/branches', icon: List },
+          { name: 'Mesas', href: '/branches/tables', icon: LayoutGrid },
+          { name: 'Personal', href: '/branches/staff', icon: Users },
+          { name: 'Pedidos', href: '/branches/orders', icon: ShoppingCart },
+        ],
+      },
+      {
+        name: 'Productos',
+        icon: Package,
+        children: [
+          { name: 'Categorias', href: '/categories', icon: FolderTree },
+          { name: 'Subcategorias', href: '/subcategories', icon: Layers },
+          { name: 'Platos', href: '/products', icon: UtensilsCrossed },
+          { name: 'Alergenos', href: '/allergens', icon: AlertTriangle },
+        ],
+      },
     ],
   },
-  { name: 'Precios', href: '/prices', icon: DollarSign },
-  { name: 'Alergenos', href: '/allergens', icon: AlertTriangle },
-  { name: 'Tipos de Promo', href: '/promotion-types', icon: Tags },
-  { name: 'Promociones', href: '/promotions', icon: Percent },
+  {
+    name: 'Marketing',
+    icon: Megaphone,
+    children: [
+      { name: 'Precios', href: '/prices', icon: DollarSign },
+      { name: 'Tipos de Promo', href: '/promotion-types', icon: Tags },
+      { name: 'Promociones', href: '/promotions', icon: Percent },
+    ],
+  },
 ]
 
 const bottomNavigation = [
   { name: 'Configuracion', href: '/settings', icon: Settings },
 ]
 
+// Helper to get all paths from a navigation structure
+function getAllPaths(items: (NavItem | NavSubGroup)[]): string[] {
+  const paths: string[] = []
+  for (const item of items) {
+    if (isNavSubGroup(item)) {
+      paths.push(...item.children.map((c) => c.href))
+    } else {
+      paths.push(item.href)
+    }
+  }
+  return paths
+}
+
+// Helper to check if a path is active
+function isPathActive(pathname: string, targetPath: string): boolean {
+  return pathname === targetPath || pathname.startsWith(targetPath + '/')
+}
+
 export function Sidebar() {
   const location = useLocation()
   const selectedBranchId = useBranchStore(selectSelectedBranchId)
   const selectedBranch = useBranchStore(selectBranchById(selectedBranchId))
 
-  // Check if any child route is active to auto-expand the group
-  const gestionPaths = ['/branches', '/categories', '/subcategories', '/products']
-  const isGestionActive = gestionPaths.some((path) => location.pathname === path)
-  const [isGestionOpen, setIsGestionOpen] = useState(isGestionActive)
+  // Track open state for all groups dynamically
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
+    const initial: Record<string, boolean> = {}
+
+    // Auto-open groups and subgroups if any child is active
+    for (const item of navigation) {
+      if (isNavGroup(item)) {
+        const groupPaths = getAllPaths(item.children)
+        const isActive = groupPaths.some((path) => isPathActive(location.pathname, path))
+        initial[item.name] = isActive
+
+        // Check subgroups
+        for (const child of item.children) {
+          if (isNavSubGroup(child)) {
+            const subIsActive = child.children.some((c) => isPathActive(location.pathname, c.href))
+            initial[child.name] = subIsActive
+          }
+        }
+      }
+    }
+
+    return initial
+  })
+
+  const toggleGroup = (name: string) => {
+    setOpenGroups((prev) => ({ ...prev, [name]: !prev[name] }))
+  }
 
   return (
     <aside className="fixed left-0 top-0 h-screen w-64 bg-zinc-900 border-r border-zinc-800 flex flex-col">
@@ -97,25 +176,21 @@ export function Sidebar() {
       <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
         {navigation.map((item) => {
           if (isNavGroup(item)) {
-            const isOpen = item.name === 'Gestion' ? isGestionOpen : false
-            const hasActiveChild = item.children.some(
-              (child) => location.pathname === child.href
-            )
+            const isOpen = openGroups[item.name] ?? false
+            const groupPaths = getAllPaths(item.children)
+            const hasActiveChild = groupPaths.some((path) => isPathActive(location.pathname, path))
 
             return (
               <div key={item.name}>
                 <button
-                  onClick={() => {
-                    if (item.name === 'Gestion') {
-                      setIsGestionOpen(!isGestionOpen)
-                    }
-                  }}
+                  onClick={() => toggleGroup(item.name)}
                   className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors duration-150 ${
                     hasActiveChild
                       ? 'text-orange-500'
                       : 'text-zinc-400 hover:text-white hover:bg-zinc-800'
                   }`}
                   aria-expanded={isOpen}
+                  aria-label={`${isOpen ? 'Contraer' : 'Expandir'} ${item.name}`}
                 >
                   <item.icon className="w-5 h-5" aria-hidden="true" />
                   <span className="font-medium flex-1 text-left">{item.name}</span>
@@ -128,22 +203,73 @@ export function Sidebar() {
                 </button>
                 {isOpen && (
                   <div className="mt-1 ml-4 pl-3 border-l border-zinc-800 space-y-1">
-                    {item.children.map((child) => (
-                      <NavLink
-                        key={child.name}
-                        to={child.href}
-                        className={({ isActive }) =>
-                          `flex items-center gap-3 px-3 py-2 rounded-lg transition-colors duration-150 ${
-                            isActive
-                              ? 'bg-orange-500/10 text-orange-500'
-                              : 'text-zinc-400 hover:text-white hover:bg-zinc-800'
-                          }`
-                        }
-                      >
-                        <child.icon className="w-4 h-4" aria-hidden="true" />
-                        <span className="text-sm font-medium">{child.name}</span>
-                      </NavLink>
-                    ))}
+                    {item.children.map((child) => {
+                      if (isNavSubGroup(child)) {
+                        const subIsOpen = openGroups[child.name] ?? false
+                        const subHasActiveChild = child.children.some((c) => isPathActive(location.pathname, c.href))
+
+                        return (
+                          <div key={child.name}>
+                            <button
+                              onClick={() => toggleGroup(child.name)}
+                              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors duration-150 ${
+                                subHasActiveChild
+                                  ? 'text-orange-500'
+                                  : 'text-zinc-400 hover:text-white hover:bg-zinc-800'
+                              }`}
+                              aria-expanded={subIsOpen}
+                              aria-label={`${subIsOpen ? 'Contraer' : 'Expandir'} ${child.name}`}
+                            >
+                              <child.icon className="w-4 h-4" aria-hidden="true" />
+                              <span className="text-sm font-medium flex-1 text-left">{child.name}</span>
+                              <ChevronRight
+                                className={`w-3 h-3 transition-transform duration-200 ${
+                                  subIsOpen ? 'rotate-90' : ''
+                                }`}
+                                aria-hidden="true"
+                              />
+                            </button>
+                            {subIsOpen && (
+                              <div className="mt-1 ml-4 pl-3 border-l border-zinc-700 space-y-1">
+                                {child.children.map((subChild) => (
+                                  <NavLink
+                                    key={subChild.name}
+                                    to={subChild.href}
+                                    className={({ isActive }) =>
+                                      `flex items-center gap-3 px-3 py-1.5 rounded-lg transition-colors duration-150 ${
+                                        isActive
+                                          ? 'bg-orange-500/10 text-orange-500'
+                                          : 'text-zinc-400 hover:text-white hover:bg-zinc-800'
+                                      }`
+                                    }
+                                  >
+                                    <subChild.icon className="w-3.5 h-3.5" aria-hidden="true" />
+                                    <span className="text-xs font-medium">{subChild.name}</span>
+                                  </NavLink>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )
+                      }
+
+                      return (
+                        <NavLink
+                          key={child.name}
+                          to={child.href}
+                          className={({ isActive }) =>
+                            `flex items-center gap-3 px-3 py-2 rounded-lg transition-colors duration-150 ${
+                              isActive
+                                ? 'bg-orange-500/10 text-orange-500'
+                                : 'text-zinc-400 hover:text-white hover:bg-zinc-800'
+                            }`
+                          }
+                        >
+                          <child.icon className="w-4 h-4" aria-hidden="true" />
+                          <span className="text-sm font-medium">{child.name}</span>
+                        </NavLink>
+                      )
+                    })}
                   </div>
                 )}
               </div>

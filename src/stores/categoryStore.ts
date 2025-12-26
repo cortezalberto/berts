@@ -158,10 +158,20 @@ export const useCategoryStore = create<CategoryState>()(
       version: STORE_VERSIONS.CATEGORIES,
       migrate: (persistedState, version) => {
         const state = persistedState as { categories: Category[] }
-        // Version 3: Reset a datos iniciales con branch_id correctos
-        if (version < 3) {
+
+        // Validate array exists
+        if (!Array.isArray(state.categories)) {
           state.categories = initialCategories
+          return state
         }
+
+        // Version 3: Non-destructive merge - only add missing initial categories
+        if (version < 3) {
+          const existingIds = new Set(state.categories.map(c => c.id))
+          const missingCategories = initialCategories.filter(c => !existingIds.has(c.id))
+          state.categories = [...state.categories, ...missingCategories]
+        }
+
         return state
       },
     }

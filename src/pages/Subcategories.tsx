@@ -199,6 +199,14 @@ export function SubcategoriesPage() {
     if (!selectedSubcategory) return
 
     try {
+      // Validate subcategory exists before delete
+      const subcategoryExists = subcategories.some((s) => s.id === selectedSubcategory.id)
+      if (!subcategoryExists) {
+        toast.error('La subcategoria ya no existe')
+        setIsDeleteOpen(false)
+        return
+      }
+
       deleteProductsBySubcategory(selectedSubcategory.id)
       deleteSubcategory(selectedSubcategory.id)
       toast.success('Subcategoria eliminada correctamente')
@@ -207,7 +215,7 @@ export function SubcategoriesPage() {
       const message = handleError(error, 'SubcategoriesPage.handleDelete')
       toast.error(`Error al eliminar la subcategoria: ${message}`)
     }
-  }, [selectedSubcategory, deleteProductsBySubcategory, deleteSubcategory])
+  }, [selectedSubcategory, subcategories, deleteProductsBySubcategory, deleteSubcategory])
 
   const columns: TableColumn<Subcategory>[] = useMemo(
     () => [
@@ -470,7 +478,7 @@ export function SubcategoriesPage() {
             type="number"
             value={formData.order}
             onChange={(e) =>
-              setFormData((prev) => ({ ...prev, order: parseInt(e.target.value) || 0 }))
+              setFormData((prev) => ({ ...prev, order: parseInt(e.target.value, 10) || 0 }))
             }
             min={0}
           />

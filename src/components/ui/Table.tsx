@@ -36,7 +36,7 @@ export function Table<T extends { id: string }>({
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full" aria-label={ariaLabel} role="grid">
+      <table className="w-full" aria-label={ariaLabel}>
         <thead>
           <tr className="border-b border-zinc-800">
             {columns.map((column) => (
@@ -54,7 +54,7 @@ export function Table<T extends { id: string }>({
           </tr>
         </thead>
         <tbody>
-          {data.map((item, rowIndex) => (
+          {data.map((item) => (
             <tr
               key={item.id}
               onClick={() => onRowClick?.(item)}
@@ -66,7 +66,6 @@ export function Table<T extends { id: string }>({
               }}
               tabIndex={onRowClick ? 0 : undefined}
               role={onRowClick ? 'button' : undefined}
-              aria-rowindex={rowIndex + 2}
               className={`
                 border-b border-zinc-800/50
                 transition-colors duration-150

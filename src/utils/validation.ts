@@ -17,12 +17,32 @@ export interface ValidationResult<T> {
   errors: ValidationErrors<T>
 }
 
+// Validation constants
+const MIN_NAME_LENGTH = 2
+const MAX_NAME_LENGTH = 100
+const MAX_DESCRIPTION_LENGTH = 500
+const MAX_ADDRESS_LENGTH = 200
+
+// Phone validation: accepts formats like +54 11 1234-5678, (011) 4567-8901, etc.
+function isValidPhone(phone: string): boolean {
+  if (!phone || phone.trim() === '') return true // Empty is valid (optional field)
+  // Remove all spaces, dashes, and parentheses for validation
+  const cleaned = phone.replace(/[\s\-()]/g, '')
+  // Must be digits, optionally starting with +
+  return /^\+?\d{6,15}$/.test(cleaned)
+}
+
 // Restaurant validation
 export function validateRestaurant(data: RestaurantFormData): ValidationResult<RestaurantFormData> {
   const errors: ValidationErrors<RestaurantFormData> = {}
 
-  if (!data.name.trim()) {
+  const trimmedName = data.name.trim()
+  if (!trimmedName) {
     errors.name = 'El nombre es requerido'
+  } else if (trimmedName.length < MIN_NAME_LENGTH) {
+    errors.name = `El nombre debe tener al menos ${MIN_NAME_LENGTH} caracteres`
+  } else if (trimmedName.length > MAX_NAME_LENGTH) {
+    errors.name = `El nombre no puede exceder ${MAX_NAME_LENGTH} caracteres`
   }
 
   if (!data.slug.trim()) {
@@ -31,8 +51,19 @@ export function validateRestaurant(data: RestaurantFormData): ValidationResult<R
     errors.slug = 'Solo letras minusculas, numeros y guiones'
   }
 
-  if (!data.description.trim()) {
+  const trimmedDescription = data.description.trim()
+  if (!trimmedDescription) {
     errors.description = 'La descripcion es requerida'
+  } else if (trimmedDescription.length > MAX_DESCRIPTION_LENGTH) {
+    errors.description = `La descripcion no puede exceder ${MAX_DESCRIPTION_LENGTH} caracteres`
+  }
+
+  if (data.address && data.address.length > MAX_ADDRESS_LENGTH) {
+    errors.address = `La direccion no puede exceder ${MAX_ADDRESS_LENGTH} caracteres`
+  }
+
+  if (data.phone && !isValidPhone(data.phone)) {
+    errors.phone = 'Telefono invalido (ej: +54 11 1234-5678)'
   }
 
   if (data.email && !PATTERNS.EMAIL.test(data.email)) {
@@ -49,8 +80,21 @@ export function validateRestaurant(data: RestaurantFormData): ValidationResult<R
 export function validateBranch(data: BranchFormData): ValidationResult<BranchFormData> {
   const errors: ValidationErrors<BranchFormData> = {}
 
-  if (!data.name.trim()) {
+  const trimmedName = data.name.trim()
+  if (!trimmedName) {
     errors.name = 'El nombre es requerido'
+  } else if (trimmedName.length < MIN_NAME_LENGTH) {
+    errors.name = `El nombre debe tener al menos ${MIN_NAME_LENGTH} caracteres`
+  } else if (trimmedName.length > MAX_NAME_LENGTH) {
+    errors.name = `El nombre no puede exceder ${MAX_NAME_LENGTH} caracteres`
+  }
+
+  if (data.address && data.address.length > MAX_ADDRESS_LENGTH) {
+    errors.address = `La direccion no puede exceder ${MAX_ADDRESS_LENGTH} caracteres`
+  }
+
+  if (data.phone && !isValidPhone(data.phone)) {
+    errors.phone = 'Telefono invalido (ej: +54 11 1234-5678)'
   }
 
   if (data.email && !PATTERNS.EMAIL.test(data.email)) {
@@ -67,8 +111,13 @@ export function validateBranch(data: BranchFormData): ValidationResult<BranchFor
 export function validateCategory(data: CategoryFormData): ValidationResult<CategoryFormData> {
   const errors: ValidationErrors<CategoryFormData> = {}
 
-  if (!data.name.trim()) {
+  const trimmedName = data.name.trim()
+  if (!trimmedName) {
     errors.name = 'El nombre es requerido'
+  } else if (trimmedName.length < MIN_NAME_LENGTH) {
+    errors.name = `El nombre debe tener al menos ${MIN_NAME_LENGTH} caracteres`
+  } else if (trimmedName.length > MAX_NAME_LENGTH) {
+    errors.name = `El nombre no puede exceder ${MAX_NAME_LENGTH} caracteres`
   }
 
   if (!data.branch_id) {
@@ -85,8 +134,13 @@ export function validateCategory(data: CategoryFormData): ValidationResult<Categ
 export function validateSubcategory(data: SubcategoryFormData): ValidationResult<SubcategoryFormData> {
   const errors: ValidationErrors<SubcategoryFormData> = {}
 
-  if (!data.name.trim()) {
+  const trimmedName = data.name.trim()
+  if (!trimmedName) {
     errors.name = 'El nombre es requerido'
+  } else if (trimmedName.length < MIN_NAME_LENGTH) {
+    errors.name = `El nombre debe tener al menos ${MIN_NAME_LENGTH} caracteres`
+  } else if (trimmedName.length > MAX_NAME_LENGTH) {
+    errors.name = `El nombre no puede exceder ${MAX_NAME_LENGTH} caracteres`
   }
 
   if (!data.category_id) {
@@ -112,12 +166,20 @@ export function validateProduct(data: ProductFormData): ProductValidationResult 
   const errors: ValidationErrors<ProductFormData> = {}
   const branchPriceErrors: BranchPriceErrors = {}
 
-  if (!data.name.trim()) {
+  const trimmedName = data.name.trim()
+  if (!trimmedName) {
     errors.name = 'El nombre es requerido'
+  } else if (trimmedName.length < MIN_NAME_LENGTH) {
+    errors.name = `El nombre debe tener al menos ${MIN_NAME_LENGTH} caracteres`
+  } else if (trimmedName.length > MAX_NAME_LENGTH) {
+    errors.name = `El nombre no puede exceder ${MAX_NAME_LENGTH} caracteres`
   }
 
-  if (!data.description.trim()) {
+  const trimmedDescription = data.description.trim()
+  if (!trimmedDescription) {
     errors.description = 'La descripcion es requerida'
+  } else if (trimmedDescription.length > MAX_DESCRIPTION_LENGTH) {
+    errors.description = `La descripcion no puede exceder ${MAX_DESCRIPTION_LENGTH} caracteres`
   }
 
   // Price validation depends on mode
@@ -162,8 +224,13 @@ export function validateProduct(data: ProductFormData): ProductValidationResult 
 export function validateAllergen(data: AllergenFormData): ValidationResult<AllergenFormData> {
   const errors: ValidationErrors<AllergenFormData> = {}
 
-  if (!data.name.trim()) {
+  const trimmedName = data.name.trim()
+  if (!trimmedName) {
     errors.name = 'El nombre es requerido'
+  } else if (trimmedName.length < MIN_NAME_LENGTH) {
+    errors.name = `El nombre debe tener al menos ${MIN_NAME_LENGTH} caracteres`
+  } else if (trimmedName.length > MAX_NAME_LENGTH) {
+    errors.name = `El nombre no puede exceder ${MAX_NAME_LENGTH} caracteres`
   }
 
   return {
@@ -176,10 +243,13 @@ export function validateAllergen(data: AllergenFormData): ValidationResult<Aller
 export function validatePromotionType(data: PromotionTypeFormData): ValidationResult<PromotionTypeFormData> {
   const errors: ValidationErrors<PromotionTypeFormData> = {}
 
-  if (!data.name.trim()) {
+  const trimmedName = data.name.trim()
+  if (!trimmedName) {
     errors.name = 'El nombre es requerido'
-  } else if (data.name.trim().length < 2) {
-    errors.name = 'El nombre debe tener al menos 2 caracteres'
+  } else if (trimmedName.length < MIN_NAME_LENGTH) {
+    errors.name = `El nombre debe tener al menos ${MIN_NAME_LENGTH} caracteres`
+  } else if (trimmedName.length > MAX_NAME_LENGTH) {
+    errors.name = `El nombre no puede exceder ${MAX_NAME_LENGTH} caracteres`
   }
 
   return {
@@ -193,6 +263,21 @@ interface PromotionValidationOptions {
   isEditing?: boolean  // true when editing an existing promotion
 }
 
+// Helper to get local date string in YYYY-MM-DD format (consistent timezone)
+function getLocalDateString(date: Date): string {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+// Helper to get local time string in HH:mm format (consistent timezone)
+function getLocalTimeString(date: Date): string {
+  const hours = String(date.getHours()).padStart(2, '0')
+  const minutes = String(date.getMinutes()).padStart(2, '0')
+  return `${hours}:${minutes}`
+}
+
 // Promotion validation
 export function validatePromotion(
   data: PromotionFormData,
@@ -200,13 +285,17 @@ export function validatePromotion(
 ): ValidationResult<PromotionFormData> {
   const errors: ValidationErrors<PromotionFormData> = {}
   const now = new Date()
-  const today = now.toISOString().split('T')[0]
-  const currentTime = now.toTimeString().slice(0, 5)
+  // Use local timezone consistently (not mixing UTC with local)
+  const today = getLocalDateString(now)
+  const currentTime = getLocalTimeString(now)
 
-  if (!data.name.trim()) {
+  const trimmedName = data.name.trim()
+  if (!trimmedName) {
     errors.name = 'El nombre es requerido'
-  } else if (data.name.trim().length < 2) {
-    errors.name = 'El nombre debe tener al menos 2 caracteres'
+  } else if (trimmedName.length < MIN_NAME_LENGTH) {
+    errors.name = `El nombre debe tener al menos ${MIN_NAME_LENGTH} caracteres`
+  } else if (trimmedName.length > MAX_NAME_LENGTH) {
+    errors.name = `El nombre no puede exceder ${MAX_NAME_LENGTH} caracteres`
   }
 
   if (typeof data.price !== 'number' || isNaN(data.price) || data.price <= 0) {

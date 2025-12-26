@@ -13,14 +13,32 @@ const generateId = () => crypto.randomUUID()
 // Map para almacenar timeout IDs y poder cancelarlos
 const timeoutIds = new Map<string, ReturnType<typeof setTimeout>>()
 
-export const useToastStore = create<ToastState>((set) => ({
+// Maximum number of toasts to prevent memory issues
+const MAX_TOASTS = 5
+
+export const useToastStore = create<ToastState>((set, get) => ({
   toasts: [],
 
   addToast: (toast) => {
     const id = generateId()
     const newToast: Toast = { ...toast, id }
 
-    set((state) => ({ toasts: [...state.toasts, newToast] }))
+    // Remove oldest toasts if exceeding limit
+    const currentToasts = get().toasts
+    if (currentToasts.length >= MAX_TOASTS) {
+      const oldestToast = currentToasts[0]
+      // Clear timeout for oldest toast before removing
+      const oldTimeoutId = timeoutIds.get(oldestToast.id)
+      if (oldTimeoutId) {
+        clearTimeout(oldTimeoutId)
+        timeoutIds.delete(oldestToast.id)
+      }
+      set((state) => ({
+        toasts: [...state.toasts.slice(1), newToast],
+      }))
+    } else {
+      set((state) => ({ toasts: [...state.toasts, newToast] }))
+    }
 
     // Auto-remove after duration
     const duration = toast.duration ?? 3000

@@ -172,6 +172,14 @@ export function PromotionsPage() {
     if (!selectedPromotion) return
 
     try {
+      // Validate promotion exists before delete
+      const promotionExists = promotions.some((p) => p.id === selectedPromotion.id)
+      if (!promotionExists) {
+        toast.error('La promocion ya no existe')
+        setIsDeleteOpen(false)
+        return
+      }
+
       deletePromotion(selectedPromotion.id)
       toast.success('Promocion eliminada correctamente')
       setIsDeleteOpen(false)
@@ -179,12 +187,19 @@ export function PromotionsPage() {
       const message = handleError(error, 'PromotionsPage.handleDelete')
       toast.error(`Error al eliminar la promocion: ${message}`)
     }
-  }, [selectedPromotion, deletePromotion])
+  }, [selectedPromotion, promotions, deletePromotion])
 
   const formatDate = (dateStr: string) => {
     if (!dateStr) return '-'
     const date = new Date(dateStr)
     return date.toLocaleDateString('es-AR')
+  }
+
+  const formatPrice = (price: number): string => {
+    return new Intl.NumberFormat('es-AR', {
+      style: 'currency',
+      currency: 'ARS',
+    }).format(price)
   }
 
   const isPromotionActive = (promotion: Promotion) => {
@@ -237,7 +252,7 @@ export function PromotionsPage() {
         width: 'w-28',
         render: (item) => (
           <span className="font-medium text-orange-500">
-            ${item.price.toLocaleString('es-AR')}
+            {formatPrice(item.price)}
           </span>
         ),
       },
@@ -459,12 +474,14 @@ export function PromotionsPage() {
             label="Precio"
             type="number"
             value={formData.price}
-            onChange={(e) =>
+            onChange={(e) => {
+              const value = e.target.value.trim()
+              const parsed = value === '' ? 0 : Number(value)
               setFormData((prev) => ({
                 ...prev,
-                price: parseFloat(e.target.value) || 0,
+                price: isNaN(parsed) ? 0 : Math.max(0, parsed),
               }))
-            }
+            }}
             min={0}
             step={0.01}
             error={errors.price}
@@ -489,6 +506,7 @@ export function PromotionsPage() {
                 setFormData((prev) => ({ ...prev, promotion_type_id: e.target.value }))
               }
               className="w-full h-10 px-3 rounded-lg border border-zinc-700 bg-zinc-800 text-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              aria-label="Tipo de promoción"
             >
               <option value="">Selecciona un tipo</option>
               {promotionTypes

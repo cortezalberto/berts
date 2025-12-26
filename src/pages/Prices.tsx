@@ -167,6 +167,24 @@ export function PricesPage() {
   const handleSavePrice = useCallback(() => {
     if (!editingProduct || !priceEdits) return
 
+    // Validate base price
+    if (priceEdits.price <= 0) {
+      toast.error('El precio base debe ser mayor a 0')
+      return
+    }
+
+    // Validate branch prices if enabled
+    if (priceEdits.useBranchPrices) {
+      const invalidBranchPrice = priceEdits.branchPrices.find(
+        (bp) => bp.is_active && bp.price <= 0
+      )
+      if (invalidBranchPrice) {
+        const branchName = activeBranches.find(b => b.id === invalidBranchPrice.branch_id)?.name || 'sucursal'
+        toast.error(`El precio en ${branchName} debe ser mayor a 0`)
+        return
+      }
+    }
+
     setIsSaving(true)
     try {
       updateProduct(editingProduct.id, {
@@ -184,7 +202,7 @@ export function PricesPage() {
     } finally {
       setIsSaving(false)
     }
-  }, [editingProduct, priceEdits, updateProduct])
+  }, [editingProduct, priceEdits, updateProduct, activeBranches])
 
   const handleBranchPriceChange = useCallback(
     (branchId: string, newPrice: number) => {
@@ -269,8 +287,18 @@ export function PricesPage() {
 
   // Bulk update
   const handleBulkUpdate = useCallback(() => {
-    if (bulkValue === 0) {
-      toast.error('Ingresa un valor valido')
+    // Validate bulkValue is a valid number
+    if (isNaN(bulkValue)) {
+      toast.error('Ingresa un valor válido')
+      return
+    }
+    // For fixed price, value must be positive; for percent, 0 is invalid
+    if (bulkType === 'fixed' && bulkValue <= 0) {
+      toast.error('El precio fijo debe ser mayor a 0')
+      return
+    }
+    if (bulkType === 'percent' && bulkValue === 0) {
+      toast.error('Ingresa un porcentaje diferente de 0')
       return
     }
 
@@ -515,12 +543,14 @@ export function PricesPage() {
               label="Precio Base"
               type="number"
               value={priceEdits.price}
-              onChange={(e) =>
+              onChange={(e) => {
+                const value = e.target.value.trim()
+                const parsed = value === '' ? 0 : Number(value)
                 setPriceEdits({
                   ...priceEdits,
-                  price: parseFloat(e.target.value) || 0,
+                  price: isNaN(parsed) ? 0 : Math.max(0, parsed),
                 })
-              }
+              }}
               min={0}
               step={0.01}
             />
@@ -599,12 +629,14 @@ export function PricesPage() {
                           <input
                             type="number"
                             value={bp.price}
-                            onChange={(e) =>
+                            onChange={(e) => {
+                              const value = e.target.value.trim()
+                              const parsed = value === '' ? 0 : Number(value)
                               handleBranchPriceChange(
                                 branch.id,
-                                parseFloat(e.target.value) || 0
+                                isNaN(parsed) ? 0 : Math.max(0, parsed)
                               )
-                            }
+                            }}
                             disabled={!bp.is_active}
                             min={0}
                             step={0.01}
@@ -665,7 +697,11 @@ export function PricesPage() {
             label={bulkType === 'percent' ? 'Porcentaje (ej: 10 o -5)' : 'Precio fijo'}
             type="number"
             value={bulkValue}
-            onChange={(e) => setBulkValue(parseFloat(e.target.value) || 0)}
+            onChange={(e) => {
+              const value = e.target.value.trim()
+              const parsed = value === '' ? 0 : Number(value)
+              setBulkValue(isNaN(parsed) ? 0 : parsed)
+            }}
             step={bulkType === 'percent' ? 1 : 0.01}
             placeholder={bulkType === 'percent' ? 'Ej: 10 para +10%' : 'Ej: 1500'}
           />

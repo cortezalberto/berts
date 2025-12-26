@@ -138,7 +138,11 @@ export function BranchPriceInput({
         label={label || 'Precio'}
         type="number"
         value={defaultPrice}
-        onChange={(e) => onDefaultPriceChange(parseFloat(e.target.value) || 0)}
+        onChange={(e) => {
+          const value = e.target.value.trim()
+          const parsed = value === '' ? 0 : Number(value)
+          onDefaultPriceChange(isNaN(parsed) ? 0 : Math.max(0, parsed))
+        }}
         min={0}
         step={0.01}
         error={!useBranchPrices ? error : undefined}
@@ -230,12 +234,14 @@ export function BranchPriceInput({
                     <input
                       type="number"
                       value={bp.price}
-                      onChange={(e) =>
+                      onChange={(e) => {
+                        const value = e.target.value.trim()
+                        const parsed = value === '' ? 0 : Number(value)
                         handleBranchPriceChange(
                           branch.id,
-                          parseFloat(e.target.value) || 0
+                          isNaN(parsed) ? 0 : Math.max(0, parsed)
                         )
-                      }
+                      }}
                       disabled={!bp.is_active}
                       min={0}
                       step={0.01}

@@ -1,4 +1,4 @@
-import { useEffect, useId } from 'react'
+import { useEffect, useId, useRef } from 'react'
 import { X } from 'lucide-react'
 import { Button } from './Button'
 import { useFocusTrap } from '../../hooks'
@@ -31,21 +31,43 @@ export function Modal({
   const contentId = useId()
   const containerRef = useFocusTrap<HTMLDivElement>(isOpen)
 
+  // Use ref to avoid re-registering listeners when onClose changes
+  const onCloseRef = useRef(onClose)
+
+  // Update ref in effect to avoid setting during render
   useEffect(() => {
+    onCloseRef.current = onClose
+  }, [onClose])
+
+  // Track modal count for nested modals - only restore overflow when last modal closes
+  useEffect(() => {
+    if (!isOpen) return
+
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
+      if (e.key === 'Escape') onCloseRef.current()
     }
 
-    if (isOpen) {
-      document.addEventListener('keydown', handleEscape)
-      document.body.style.overflow = 'hidden'
-    }
+    // Track number of open modals to handle nested modals correctly
+    const currentOverflow = document.body.style.overflow
+    const modalCount = parseInt(document.body.dataset.modalCount || '0', 10)
+    document.body.dataset.modalCount = String(modalCount + 1)
+
+    document.addEventListener('keydown', handleEscape)
+    document.body.style.overflow = 'hidden'
 
     return () => {
       document.removeEventListener('keydown', handleEscape)
-      document.body.style.overflow = ''
+
+      // Only restore overflow when last modal closes
+      const count = parseInt(document.body.dataset.modalCount || '1', 10)
+      document.body.dataset.modalCount = String(Math.max(0, count - 1))
+
+      if (count <= 1) {
+        document.body.style.overflow = currentOverflow || ''
+        delete document.body.dataset.modalCount
+      }
     }
-  }, [isOpen, onClose])
+  }, [isOpen])
 
   if (!isOpen) return null
 
@@ -82,7 +104,7 @@ export function Modal({
             className="p-1 -mr-2"
             aria-label="Cerrar modal"
           >
-            <X className="w-5 h-5" />
+            <X className="w-5 h-5" aria-hidden="true" />
           </Button>
         </div>
 
