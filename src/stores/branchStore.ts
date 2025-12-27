@@ -17,15 +17,15 @@ interface BranchState {
 
 const generateId = () => crypto.randomUUID()
 
-// Mock data: 4 sucursales de Barijho
+// Mock data: 4 sucursales de Buen Sabor
 const initialBranches: Branch[] = [
   {
     id: 'branch-1',
-    name: 'Barijho Centro',
+    name: 'Buen Sabor Centro',
     restaurant_id: 'restaurant-1',
     address: 'Av. Corrientes 1234, CABA',
     phone: '+54 11 1234-5678',
-    email: 'centro@barijho.com',
+    email: 'centro@buensabor.com',
     image: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400&h=300&fit=crop',
     opening_time: '08:00',
     closing_time: '00:00',
@@ -35,11 +35,11 @@ const initialBranches: Branch[] = [
   },
   {
     id: 'branch-2',
-    name: 'Barijho Norte',
+    name: 'Buen Sabor Norte',
     restaurant_id: 'restaurant-1',
     address: 'Av. Cabildo 2345, CABA',
     phone: '+54 11 2345-6789',
-    email: 'norte@barijho.com',
+    email: 'norte@buensabor.com',
     image: 'https://images.unsplash.com/photo-1552566626-52f8b828add9?w=400&h=300&fit=crop',
     opening_time: '09:00',
     closing_time: '23:00',
@@ -49,11 +49,11 @@ const initialBranches: Branch[] = [
   },
   {
     id: 'branch-3',
-    name: 'Barijho Sur',
+    name: 'Buen Sabor Sur',
     restaurant_id: 'restaurant-1',
     address: 'Av. Caseros 3456, CABA',
     phone: '+54 11 3456-7890',
-    email: 'sur@barijho.com',
+    email: 'sur@buensabor.com',
     image: 'https://images.unsplash.com/photo-1466978913421-dad2ebd01d17?w=400&h=300&fit=crop',
     opening_time: '10:00',
     closing_time: '22:00',
@@ -63,11 +63,11 @@ const initialBranches: Branch[] = [
   },
   {
     id: 'branch-4',
-    name: 'Barijho Este',
+    name: 'Buen Sabor Este',
     restaurant_id: 'restaurant-1',
     address: 'Av. Santa Fe 4567, CABA',
     phone: '+54 11 4567-8901',
-    email: 'este@barijho.com',
+    email: 'este@buensabor.com',
     image: 'https://images.unsplash.com/photo-1559329007-40df8a9345d8?w=400&h=300&fit=crop',
     opening_time: '11:00',
     closing_time: '23:30',

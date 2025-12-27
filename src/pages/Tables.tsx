@@ -1,20 +1,17 @@
 import { useState, useMemo, useCallback, useId } from 'react'
-import { Plus, Pencil, Trash2, Users, Archive } from 'lucide-react'
+import { Plus, Trash2, Users, Archive, Clock } from 'lucide-react'
 import { PageContainer } from '../components/layout'
 import {
   Card,
   Button,
-  Table,
   Modal,
   Input,
   Select,
   Toggle,
   ConfirmDialog,
   Badge,
-  Pagination,
   HelpButton,
 } from '../components/ui'
-import { usePagination } from '../hooks/usePagination'
 import { useTableStore, selectTables } from '../stores/tableStore'
 import { useBranchStore, selectBranches } from '../stores/branchStore'
 import { useOrderHistoryStore } from '../stores/orderHistoryStore'
@@ -23,7 +20,7 @@ import { validateTable, type ValidationErrors } from '../utils/validation'
 import { handleError } from '../utils/logger'
 import { helpContent } from '../utils/helpContent'
 import { TABLE_STATUS_LABELS, TABLE_SECTORS, TABLE_DEFAULT_TIME } from '../utils/constants'
-import type { RestaurantTable, RestaurantTableFormData, TableColumn, TableStatus } from '../types'
+import type { RestaurantTable, RestaurantTableFormData, TableStatus } from '../types'
 
 const initialFormData: RestaurantTableFormData = {
   branch_id: '',
@@ -44,21 +41,172 @@ const statusOptions: { value: TableStatus; label: string }[] = [
   { value: 'ocupada', label: 'Ocupada' },
 ]
 
-function getStatusBadge(status: TableStatus) {
+// Colores para cada estado de mesa
+function getStatusStyles(status: TableStatus, isActive: boolean) {
+  if (!isActive) {
+    return {
+      bg: 'bg-zinc-800',
+      border: 'border-zinc-600',
+      text: 'text-zinc-500',
+      label: 'Inactiva',
+    }
+  }
+
   switch (status) {
     case 'libre':
-      return <Badge variant="success"><span className="sr-only">Estado:</span> Libre</Badge>
-    case 'solicito_pedido':
-      return <Badge variant="warning"><span className="sr-only">Estado:</span> Solicito Pedido</Badge>
-    case 'pedido_cumplido':
-      return <Badge variant="info"><span className="sr-only">Estado:</span> Pedido Cumplido</Badge>
-    case 'cuenta_solicitada':
-      return <Badge variant="secondary"><span className="sr-only">Estado:</span> Cuenta Solicitada</Badge>
+      return {
+        bg: 'bg-green-900/30',
+        border: 'border-green-500',
+        text: 'text-green-400',
+        label: 'Libre',
+      }
     case 'ocupada':
-      return <Badge variant="danger"><span className="sr-only">Estado:</span> Ocupada</Badge>
+      return {
+        bg: 'bg-red-900/30',
+        border: 'border-red-500',
+        text: 'text-red-400',
+        label: 'Ocupada',
+      }
+    case 'solicito_pedido':
+      return {
+        bg: 'bg-yellow-900/30',
+        border: 'border-yellow-500',
+        text: 'text-yellow-400',
+        label: 'Solicito Pedido',
+      }
+    case 'pedido_cumplido':
+      return {
+        bg: 'bg-blue-900/30',
+        border: 'border-blue-500',
+        text: 'text-blue-400',
+        label: 'Pedido Cumplido',
+      }
+    case 'cuenta_solicitada':
+      return {
+        bg: 'bg-purple-900/30',
+        border: 'border-purple-500',
+        text: 'text-purple-400',
+        label: 'Cuenta Solicitada',
+      }
     default:
-      return <Badge><span className="sr-only">Estado:</span> {TABLE_STATUS_LABELS[status] || status}</Badge>
+      return {
+        bg: 'bg-zinc-800',
+        border: 'border-zinc-600',
+        text: 'text-zinc-400',
+        label: TABLE_STATUS_LABELS[status] || status,
+      }
   }
+}
+
+// Componente de tarjeta de mesa
+interface TableCardProps {
+  table: RestaurantTable
+  onEdit: (table: RestaurantTable) => void
+  onDelete: (table: RestaurantTable) => void
+  onArchive: (table: RestaurantTable) => void
+}
+
+function TableCard({ table, onEdit, onDelete, onArchive }: TableCardProps) {
+  const styles = getStatusStyles(table.status, table.is_active !== false)
+
+  return (
+    <div
+      className={`
+        relative p-2 rounded-md border-2 transition-all duration-200
+        hover:scale-[1.03] hover:shadow-md cursor-pointer min-w-[100px]
+        ${styles.bg} ${styles.border}
+      `}
+      onClick={() => onEdit(table)}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onEdit(table)
+        }
+      }}
+      aria-label={`Mesa ${table.number}, ${styles.label}, ${table.capacity} personas, sector ${table.sector}`}
+    >
+      {/* Numero de mesa */}
+      <div className="text-center mb-1">
+        <span className="text-lg font-bold text-white">#{table.number}</span>
+      </div>
+
+      {/* Estado */}
+      <div className={`text-center text-[10px] font-semibold mb-1 ${styles.text}`}>
+        {styles.label}
+      </div>
+
+      {/* Info mínima */}
+      <div className="flex items-center justify-center gap-2 text-[10px] text-zinc-400">
+        <div className="flex items-center gap-0.5">
+          <Users className="w-2.5 h-2.5" aria-hidden="true" />
+          <span>{table.capacity}</span>
+        </div>
+        {table.status !== 'libre' && table.status !== 'ocupada' && (
+          <div className="flex items-center gap-0.5">
+            <Clock className="w-2.5 h-2.5" aria-hidden="true" />
+            <span>{table.order_time}</span>
+          </div>
+        )}
+      </div>
+
+      {/* Botones de acción */}
+      <div className="absolute top-0.5 right-0.5 flex gap-0.5">
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation()
+            onDelete(table)
+          }}
+          className="p-0.5 rounded bg-zinc-800/80 hover:bg-red-600 text-zinc-400 hover:text-white transition-colors"
+          aria-label={`Eliminar mesa ${table.number}`}
+        >
+          <Trash2 className="w-2.5 h-2.5" aria-hidden="true" />
+        </button>
+        {table.status === 'cuenta_solicitada' && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              onArchive(table)
+            }}
+            className="p-0.5 rounded bg-zinc-800/80 hover:bg-green-600 text-green-400 hover:text-white transition-colors"
+            aria-label={`Liberar mesa ${table.number}`}
+            title="Liberar mesa y archivar en historial"
+          >
+            <Archive className="w-2.5 h-2.5" aria-hidden="true" />
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// Leyenda de estados
+function StatusLegend() {
+  const statuses: { status: TableStatus; label: string }[] = [
+    { status: 'libre', label: 'Libre' },
+    { status: 'ocupada', label: 'Ocupada' },
+    { status: 'solicito_pedido', label: 'Solicito Pedido' },
+    { status: 'pedido_cumplido', label: 'Pedido Cumplido' },
+    { status: 'cuenta_solicitada', label: 'Cuenta Solicitada' },
+  ]
+
+  return (
+    <div className="flex flex-wrap gap-4 mb-4 p-3 bg-zinc-800/50 rounded-lg">
+      <span className="text-sm text-zinc-400 font-medium">Leyenda:</span>
+      {statuses.map(({ status, label }) => {
+        const styles = getStatusStyles(status, true)
+        return (
+          <div key={status} className="flex items-center gap-2">
+            <div className={`w-4 h-4 rounded border-2 ${styles.bg} ${styles.border}`} />
+            <span className={`text-sm ${styles.text}`}>{label}</span>
+          </div>
+        )
+      })}
+    </div>
+  )
 }
 
 export function TablesPage() {
@@ -89,7 +237,6 @@ export function TablesPage() {
 
   // Filter tables by branch and status
   const filteredTables = useMemo(() => {
-    // Always filter by selected branch
     let result = tables.filter((t) => t.branch_id === filterBranchId)
     if (filterStatus) {
       result = result.filter((t) => t.status === filterStatus)
@@ -97,25 +244,21 @@ export function TablesPage() {
     return result
   }, [tables, filterBranchId, filterStatus])
 
-  // Sort by branch name, then by number
+  // Sort by status (grouped), then by number within each status
   const sortedTables = useMemo(() => {
+    const statusOrder: Record<TableStatus, number> = {
+      cuenta_solicitada: 1,  // Más urgente primero
+      solicito_pedido: 2,
+      pedido_cumplido: 3,
+      ocupada: 4,
+      libre: 5,              // Menos urgente al final
+    }
     return [...filteredTables].sort((a, b) => {
-      const branchA = branches.find((br) => br.id === a.branch_id)?.name || ''
-      const branchB = branches.find((br) => br.id === b.branch_id)?.name || ''
-      const branchCompare = branchA.localeCompare(branchB)
-      if (branchCompare !== 0) return branchCompare
+      const statusDiff = statusOrder[a.status] - statusOrder[b.status]
+      if (statusDiff !== 0) return statusDiff
       return a.number - b.number
     })
-  }, [filteredTables, branches])
-
-  const {
-    paginatedItems: paginatedTables,
-    currentPage,
-    totalPages,
-    totalItems,
-    itemsPerPage,
-    setCurrentPage,
-  } = usePagination(sortedTables)
+  }, [filteredTables])
 
   const getBranchName = useCallback(
     (branchId: string) => {
@@ -126,7 +269,7 @@ export function TablesPage() {
   )
 
   const openCreateModal = useCallback(() => {
-    const defaultBranchId = branches.length > 0 ? branches[0].id : ''
+    const defaultBranchId = filterBranchId || (branches.length > 0 ? branches[0].id : '')
     const nextNumber = defaultBranchId ? getNextTableNumber(defaultBranchId) : 1
     setSelectedTable(null)
     setFormData({
@@ -136,7 +279,7 @@ export function TablesPage() {
     })
     setErrors({})
     setIsModalOpen(true)
-  }, [branches, getNextTableNumber])
+  }, [branches, getNextTableNumber, filterBranchId])
 
   const openEditModal = useCallback((table: RestaurantTable) => {
     setSelectedTable(table)
@@ -171,7 +314,6 @@ export function TablesPage() {
     [getNextTableNumber, selectedTable]
   )
 
-  // Get current time in HH:mm format
   const getCurrentTime = useCallback(() => {
     const now = new Date()
     return now.toTimeString().slice(0, 5)
@@ -179,13 +321,6 @@ export function TablesPage() {
 
   const handleStatusChange = useCallback((newStatus: TableStatus) => {
     setFormData((prev) => {
-      // Time rules by status:
-      // - libre: order_time=00:00, close_time=00:00
-      // - ocupada: order_time=00:00, close_time=00:00
-      // - solicito_pedido: order_time=current time (if new), close_time=00:00
-      // - pedido_cumplido: order_time=HH:mm (mantiene hora del pedido), close_time=00:00
-      // - cuenta_solicitada: order_time=HH:mm, close_time=current time (if new)
-
       if (newStatus === 'libre' || newStatus === 'ocupada') {
         return {
           ...prev,
@@ -196,7 +331,6 @@ export function TablesPage() {
       }
 
       if (newStatus === 'solicito_pedido') {
-        // If coming from status without order_time, set to current time
         const orderTime = (prev.status === 'libre' || prev.status === 'ocupada')
           ? getCurrentTime()
           : prev.order_time
@@ -209,7 +343,6 @@ export function TablesPage() {
       }
 
       if (newStatus === 'pedido_cumplido') {
-        // Keep order_time, reset close_time to 00:00
         const orderTime = prev.order_time === TABLE_DEFAULT_TIME ? getCurrentTime() : prev.order_time
         return {
           ...prev,
@@ -220,7 +353,6 @@ export function TablesPage() {
       }
 
       if (newStatus === 'cuenta_solicitada') {
-        // Keep order_time, set close_time to current if not set
         const orderTime = prev.order_time === TABLE_DEFAULT_TIME ? getCurrentTime() : prev.order_time
         const closeTime = prev.close_time === TABLE_DEFAULT_TIME ? getCurrentTime() : prev.close_time
         return {
@@ -267,7 +399,6 @@ export function TablesPage() {
     if (!selectedTable) return
 
     try {
-      // Validate table exists before delete
       const tableExists = tables.some((t) => t.id === selectedTable.id)
       if (!tableExists) {
         toast.error('La mesa ya no existe')
@@ -286,17 +417,12 @@ export function TablesPage() {
 
   const handleArchive = useCallback((table: RestaurantTable) => {
     try {
-      // Get current time for close_time
       const closeTime = getCurrentTime()
-
-      // Check if there's an active order history for this table
       const activeHistory = getActiveOrderHistory(table.id)
 
       if (activeHistory) {
-        // Close the existing order history
         closeOrderHistory(activeHistory.id, closeTime)
       } else {
-        // Create and immediately close a new order history record
         const newHistory = createOrderHistory({
           branch_id: table.branch_id,
           table_id: table.id,
@@ -305,7 +431,6 @@ export function TablesPage() {
         closeOrderHistory(newHistory.id, closeTime)
       }
 
-      // Reset table to libre status with times at 00:00
       updateTable(table.id, {
         status: 'libre',
         order_time: TABLE_DEFAULT_TIME,
@@ -318,131 +443,6 @@ export function TablesPage() {
       toast.error(`Error al archivar: ${message}`)
     }
   }, [createOrderHistory, closeOrderHistory, getActiveOrderHistory, getCurrentTime, updateTable])
-
-  const columns: TableColumn<RestaurantTable>[] = useMemo(
-    () => [
-      {
-        key: 'number',
-        label: 'Mesa',
-        width: 'w-20',
-        render: (item) => (
-          <span className="font-bold text-lg text-orange-500">#{item.number}</span>
-        ),
-      },
-      {
-        key: 'branch_id',
-        label: 'Sucursal',
-        render: (item) => (
-          <span className="text-zinc-300">{getBranchName(item.branch_id)}</span>
-        ),
-      },
-      {
-        key: 'capacity',
-        label: 'Capacidad',
-        width: 'w-28',
-        render: (item) => (
-          <div className="flex items-center gap-2">
-            <Users className="w-4 h-4 text-zinc-500" aria-hidden="true" />
-            <span>{item.capacity} personas</span>
-          </div>
-        ),
-      },
-      {
-        key: 'sector',
-        label: 'Sector',
-        render: (item) => <span className="text-zinc-400">{item.sector}</span>,
-      },
-      {
-        key: 'status',
-        label: 'Estado',
-        width: 'w-36',
-        render: (item) => getStatusBadge(item.status),
-      },
-      {
-        key: 'order_time',
-        label: 'Hora Pedido',
-        width: 'w-28',
-        render: (item) => (
-          <span className={item.status === 'libre' ? 'text-zinc-500' : 'text-zinc-300'}>
-            {item.order_time || TABLE_DEFAULT_TIME}
-          </span>
-        ),
-      },
-      {
-        key: 'close_time',
-        label: 'Hora Cierre',
-        width: 'w-28',
-        render: (item) => (
-          <span className={item.status === 'libre' ? 'text-zinc-500' : 'text-zinc-300'}>
-            {item.close_time || TABLE_DEFAULT_TIME}
-          </span>
-        ),
-      },
-      {
-        key: 'is_active',
-        label: 'Activa',
-        width: 'w-24',
-        render: (item) =>
-          item.is_active !== false ? (
-            <Badge variant="success">
-              <span className="sr-only">Mesa</span> Activa
-            </Badge>
-          ) : (
-            <Badge variant="danger">
-              <span className="sr-only">Mesa</span> Inactiva
-            </Badge>
-          ),
-      },
-      {
-        key: 'actions',
-        label: 'Acciones',
-        width: 'w-36',
-        render: (item) => (
-          <div className="flex items-center gap-1">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation()
-                openEditModal(item)
-              }}
-              aria-label={`Editar mesa ${item.number}`}
-            >
-              <Pencil className="w-4 h-4" aria-hidden="true" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation()
-                openDeleteDialog(item)
-              }}
-              className="text-red-500 hover:text-red-400 hover:bg-red-500/10"
-              aria-label={`Eliminar mesa ${item.number}`}
-            >
-              <Trash2 className="w-4 h-4" aria-hidden="true" />
-            </Button>
-            {item.status === 'cuenta_solicitada' && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  handleArchive(item)
-                }}
-                className="text-green-500 hover:text-green-400 hover:bg-green-500/10"
-                aria-label={`Liberar mesa ${item.number}`}
-                title="Liberar mesa y archivar en historial"
-              >
-                <Archive className="w-4 h-4" aria-hidden="true" />
-              </Button>
-            )}
-          </div>
-        ),
-      },
-    ],
-    [getBranchName, openEditModal, openDeleteDialog, handleArchive]
-  )
 
   const branchOptions = useMemo(
     () =>
@@ -470,6 +470,24 @@ export function TablesPage() {
     []
   )
 
+  // Contadores por estado
+  const statusCounts = useMemo(() => {
+    const counts: Record<string, number> = {
+      total: sortedTables.length,
+      libre: 0,
+      ocupada: 0,
+      solicito_pedido: 0,
+      pedido_cumplido: 0,
+      cuenta_solicitada: 0,
+    }
+    sortedTables.forEach((t) => {
+      if (counts[t.status] !== undefined) {
+        counts[t.status]++
+      }
+    })
+    return counts
+  }, [sortedTables])
+
   return (
     <PageContainer
       title="Mesas"
@@ -485,8 +503,8 @@ export function TablesPage() {
         </Button>
       }
     >
-      {/* Filters by branch and status */}
-      <div className="mb-4 flex items-center gap-4">
+      {/* Filters */}
+      <div className="mb-4 flex flex-wrap items-center gap-4">
         <Select
           id={filterBranchSelectId}
           options={branchOptions}
@@ -503,7 +521,21 @@ export function TablesPage() {
           className="w-48"
           aria-label="Filtrar mesas por estado"
         />
+
+        {/* Contador de mesas */}
+        <div className="flex items-center gap-2 ml-auto">
+          <Badge variant="default">{statusCounts.total} mesas</Badge>
+          {statusCounts.libre > 0 && (
+            <Badge variant="success">{statusCounts.libre} libres</Badge>
+          )}
+          {statusCounts.ocupada > 0 && (
+            <Badge variant="danger">{statusCounts.ocupada} ocupadas</Badge>
+          )}
+        </div>
       </div>
+
+      {/* Leyenda de colores */}
+      <StatusLegend />
 
       {branches.length === 0 ? (
         <Card className="text-center py-12">
@@ -511,22 +543,30 @@ export function TablesPage() {
             No hay sucursales. Crea una sucursal primero para poder agregar mesas.
           </p>
         </Card>
-      ) : (
-        <Card padding="none">
-          <Table
-            data={paginatedTables}
-            columns={columns}
-            emptyMessage="No hay mesas. Crea una para comenzar."
-            ariaLabel="Lista de mesas"
-          />
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            totalItems={totalItems}
-            itemsPerPage={itemsPerPage}
-            onPageChange={setCurrentPage}
-          />
+      ) : sortedTables.length === 0 ? (
+        <Card className="text-center py-12">
+          <p className="text-zinc-500 mb-4">
+            No hay mesas en esta sucursal. Crea una para comenzar.
+          </p>
+          <Button onClick={openCreateModal} leftIcon={<Plus className="w-4 h-4" />}>
+            Nueva Mesa
+          </Button>
         </Card>
+      ) : (
+        /* Cuadrícula de mesas - 8 columnas, scrollable */
+        <div className="max-h-[600px] overflow-y-auto pr-2">
+          <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-2">
+            {sortedTables.map((table) => (
+              <TableCard
+                key={table.id}
+                table={table}
+                onEdit={openEditModal}
+                onDelete={openDeleteDialog}
+                onArchive={handleArchive}
+              />
+            ))}
+          </div>
+        </div>
       )}
 
       {/* Create/Edit Modal */}
@@ -655,7 +695,7 @@ export function TablesPage() {
             error={errors.status}
           />
 
-          {/* Time fields - editable based on status rules */}
+          {/* Time fields */}
           <div className="grid grid-cols-2 gap-4">
             <Input
               label="Hora Pedido"

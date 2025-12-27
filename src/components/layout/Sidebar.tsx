@@ -174,7 +174,7 @@ export function Sidebar() {
           <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center">
             <span className="text-white font-bold text-lg">B</span>
           </div>
-          <span className="text-white font-semibold text-lg">barijho</span>
+          <span className="text-white font-semibold text-lg">Buen Sabor</span>
         </div>
       </div>
 

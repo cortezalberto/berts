@@ -17,13 +17,13 @@ const generateId = () => crypto.randomUUID()
 // Initial restaurant mock data
 const initialRestaurant: Restaurant = {
   id: 'restaurant-1',
-  name: 'Barijho',
-  slug: 'barijho',
+  name: 'Buen Sabor',
+  slug: 'buen-sabor',
   description: 'Restaurante de comida rapida con las mejores hamburguesas de la ciudad',
   theme_color: '#f97316',
   address: 'Av. Principal 123',
   phone: '+54 11 1234-5678',
-  email: 'info@barijho.com',
+  email: 'info@buensabor.com',
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
 }

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Restaurant Admin Dashboard ("barijho") for managing menu items with multi-branch support. Built with React 19, TypeScript, and Vite. The UI is in Spanish.
+Restaurant Admin Dashboard ("Buen Sabor") for managing menu items with multi-branch support. Built with React 19, TypeScript, and Vite. The UI is in Spanish.
 
 **Data Hierarchy:**
 ```
@@ -317,6 +317,14 @@ interface RestaurantTable {
 }
 ```
 
+**Visual Grid UI:** Tables are displayed as a responsive grid of colored cards (8 columns on xl screens, scrollable container). Each card shows table number, status with color coding, capacity, and order time. Status colors:
+- `libre` → green
+- `ocupada` → red
+- `solicito_pedido` → yellow
+- `pedido_cumplido` → blue
+- `cuenta_solicitada` → purple
+- inactive → gray
+
 **Time Rules by Status:**
 | Status | order_time | close_time |
 |--------|------------|------------|
@@ -350,6 +358,13 @@ const handleArchive = useCallback((table: RestaurantTable) => {
   })
 }, [createOrderHistory, updateTable])
 ```
+
+**Sorting:** Tables are sorted by status priority (most urgent first), then by table number within each status group:
+1. `cuenta_solicitada` (need to close)
+2. `solicito_pedido` (waiting for order)
+3. `pedido_cumplido` (order delivered)
+4. `ocupada` (seated, no activity)
+5. `libre` (available)
 
 **Filter Behavior:**
 - Branch filter defaults to first branch (no "all branches" option)
@@ -537,6 +552,7 @@ The Modal component tracks open modal count via `document.body.dataset.modalCoun
 All stores contain consistent mock data for development. Key relationships:
 - **Restaurant**: Single restaurant with `id: 'restaurant-1'`
 - **Branches**: 4 branches (`branch-1` to `branch-4`) all linked to `restaurant_id: 'restaurant-1'`
+- **Tables**: 45 tables generated via `generateBranchTables()` helper (branch-1: 15, branch-2: 12, branch-3: 10, branch-4: 8) with cycling statuses and sectors
 - **Products**: IDs are simple strings (`'1'` to `'14'` for branch-1 products)
 - **Promotions**: Reference products by their actual IDs (e.g., `product_id: '3'` for Hamburguesa Clasica)
 

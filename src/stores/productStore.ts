@@ -29,7 +29,7 @@ const createProduct = (product: Omit<Product, 'branch_prices' | 'use_branch_pric
   use_branch_prices: false,
 })
 
-// Initial mock products with allergen_ids - Branch 1 (Barijho Centro)
+// Initial mock products with allergen_ids - Branch 1 (Buen Sabor Centro)
 const initialProducts: Product[] = [
   createProduct({
     id: '1',
@@ -217,7 +217,7 @@ const initialProducts: Product[] = [
     allergen_ids: [],
     is_active: true,
   }),
-  // Branch 2 - Barijho Norte
+  // Branch 2 - Buen Sabor Norte
   createProduct({
     id: 'b2-prod-1',
     name: 'Pizza Margherita',
@@ -257,7 +257,7 @@ const initialProducts: Product[] = [
     allergen_ids: ['alg-2'],
     is_active: true,
   }),
-  // Branch 3 - Barijho Sur
+  // Branch 3 - Buen Sabor Sur
   createProduct({
     id: 'b3-prod-1',
     name: 'Asado Completo',
@@ -284,7 +284,7 @@ const initialProducts: Product[] = [
     allergen_ids: [],
     is_active: true,
   }),
-  // Branch 4 - Barijho Este
+  // Branch 4 - Buen Sabor Este
   createProduct({
     id: 'b4-prod-1',
     name: 'Sushi Variado',

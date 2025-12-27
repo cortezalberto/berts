@@ -24,93 +24,47 @@ const generateId = () => crypto.randomUUID()
 // - solicito_pedido: order_time=HH:mm (hora del pedido), close_time=00:00
 // - pedido_cumplido: order_time=HH:mm (mantiene hora del pedido), close_time=00:00
 // - cuenta_solicitada: order_time=HH:mm, close_time=HH:mm (close >= order)
+// Helper to generate tables for a branch
+const generateBranchTables = (
+  branchId: string,
+  startId: number,
+  count: number,
+  sectors: string[]
+): RestaurantTable[] => {
+  const statuses: Array<{ status: RestaurantTable['status']; order: string; close: string }> = [
+    { status: 'libre', order: TABLE_DEFAULT_TIME, close: TABLE_DEFAULT_TIME },
+    { status: 'ocupada', order: TABLE_DEFAULT_TIME, close: TABLE_DEFAULT_TIME },
+    { status: 'solicito_pedido', order: '12:30', close: TABLE_DEFAULT_TIME },
+    { status: 'pedido_cumplido', order: '11:45', close: TABLE_DEFAULT_TIME },
+    { status: 'cuenta_solicitada', order: '10:00', close: '12:30' },
+  ]
+
+  return Array.from({ length: count }, (_, i) => {
+    const statusData = statuses[i % statuses.length]
+    return {
+      id: `table-${startId + i}`,
+      branch_id: branchId,
+      number: i + 1,
+      capacity: [2, 4, 4, 6, 8][i % 5],
+      sector: sectors[i % sectors.length],
+      status: statusData.status,
+      order_time: statusData.order,
+      close_time: statusData.close,
+      is_active: i % 10 !== 9, // 1 de cada 10 inactiva
+      created_at: new Date().toISOString(),
+    }
+  })
+}
+
 const initialTables: RestaurantTable[] = [
-  // Branch 1 - Centro tables
-  {
-    id: 'table-1',
-    branch_id: 'branch-1',
-    number: 1,
-    capacity: 4,
-    sector: 'Interior',
-    status: 'libre',
-    order_time: TABLE_DEFAULT_TIME,
-    close_time: TABLE_DEFAULT_TIME,
-    is_active: true,
-    created_at: new Date().toISOString(),
-  },
-  {
-    id: 'table-2',
-    branch_id: 'branch-1',
-    number: 2,
-    capacity: 2,
-    sector: 'Interior',
-    status: 'cuenta_solicitada',
-    order_time: '12:30',              // cuenta_solicitada: ambas horas con valor
-    close_time: '14:15',              // close_time >= order_time
-    is_active: true,
-    created_at: new Date().toISOString(),
-  },
-  {
-    id: 'table-3',
-    branch_id: 'branch-1',
-    number: 3,
-    capacity: 6,
-    sector: 'Terraza',
-    status: 'ocupada',
-    order_time: TABLE_DEFAULT_TIME,
-    close_time: TABLE_DEFAULT_TIME,
-    is_active: true,
-    created_at: new Date().toISOString(),
-  },
-  {
-    id: 'table-4',
-    branch_id: 'branch-1',
-    number: 4,
-    capacity: 8,
-    sector: 'VIP',
-    status: 'pedido_cumplido',
-    order_time: '11:45',                 // pedido_cumplido: mantiene hora del pedido
-    close_time: TABLE_DEFAULT_TIME,
-    is_active: true,
-    created_at: new Date().toISOString(),
-  },
-  // Branch 2 - Norte tables
-  {
-    id: 'table-5',
-    branch_id: 'branch-2',
-    number: 1,
-    capacity: 4,
-    sector: 'Interior',
-    status: 'libre',
-    order_time: TABLE_DEFAULT_TIME,
-    close_time: TABLE_DEFAULT_TIME,
-    is_active: true,
-    created_at: new Date().toISOString(),
-  },
-  {
-    id: 'table-6',
-    branch_id: 'branch-2',
-    number: 2,
-    capacity: 4,
-    sector: 'Interior',
-    status: 'solicito_pedido',
-    order_time: '13:00',              // solicito_pedido: order_time tiene valor
-    close_time: TABLE_DEFAULT_TIME,   // close_time en 00:00
-    is_active: true,
-    created_at: new Date().toISOString(),
-  },
-  {
-    id: 'table-7',
-    branch_id: 'branch-2',
-    number: 3,
-    capacity: 2,
-    sector: 'Barra',
-    status: 'libre',
-    order_time: TABLE_DEFAULT_TIME,
-    close_time: TABLE_DEFAULT_TIME,
-    is_active: true,
-    created_at: new Date().toISOString(),
-  },
+  // Branch 1 - Centro: 15 mesas
+  ...generateBranchTables('branch-1', 1, 15, ['Interior', 'Terraza', 'VIP', 'Barra']),
+  // Branch 2 - Norte: 12 mesas
+  ...generateBranchTables('branch-2', 20, 12, ['Interior', 'Jardin', 'Salon Principal']),
+  // Branch 3 - Sur: 10 mesas
+  ...generateBranchTables('branch-3', 40, 10, ['Interior', 'Terraza', 'VIP']),
+  // Branch 4 - Oeste: 8 mesas
+  ...generateBranchTables('branch-4', 60, 8, ['Interior', 'Barra', 'Salon Principal']),
 ]
 
 export const useTableStore = create<TableState>()(

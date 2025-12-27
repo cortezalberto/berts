@@ -370,7 +370,7 @@ export function BranchesPage() {
             onChange={(e) =>
               setFormData((prev) => ({ ...prev, name: e.target.value }))
             }
-            placeholder="Ej: Barijho Centro"
+            placeholder="Ej: Buen Sabor Centro"
             error={errors.name}
           />
 
@@ -402,7 +402,7 @@ export function BranchesPage() {
               onChange={(e) =>
                 setFormData((prev) => ({ ...prev, email: e.target.value }))
               }
-              placeholder="Ej: sucursal@barijho.com"
+              placeholder="Ej: sucursal@buensabor.com"
               error={errors.email}
             />
           </div>

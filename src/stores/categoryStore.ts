@@ -19,7 +19,7 @@ const generateId = () => crypto.randomUUID()
 
 // Initial mock categories - con branch_id para cada sucursal
 const initialCategories: Category[] = [
-  // Branch 1 - Barijho Centro (completo)
+  // Branch 1 - Buen Sabor Centro (completo)
   { id: 'b1-home', name: 'Home', order: 0, is_active: true, branch_id: 'branch-1' },
   {
     id: 'b1-cat-1',
@@ -45,7 +45,7 @@ const initialCategories: Category[] = [
     is_active: true,
     branch_id: 'branch-1',
   },
-  // Branch 2 - Barijho Norte
+  // Branch 2 - Buen Sabor Norte
   { id: 'b2-home', name: 'Home', order: 0, is_active: true, branch_id: 'branch-2' },
   {
     id: 'b2-cat-1',
@@ -63,7 +63,7 @@ const initialCategories: Category[] = [
     is_active: true,
     branch_id: 'branch-2',
   },
-  // Branch 3 - Barijho Sur
+  // Branch 3 - Buen Sabor Sur
   { id: 'b3-home', name: 'Home', order: 0, is_active: true, branch_id: 'branch-3' },
   {
     id: 'b3-cat-1',
@@ -73,7 +73,7 @@ const initialCategories: Category[] = [
     is_active: true,
     branch_id: 'branch-3',
   },
-  // Branch 4 - Barijho Este (completo)
+  // Branch 4 - Buen Sabor Este (completo)
   { id: 'b4-home', name: 'Home', order: 0, is_active: true, branch_id: 'branch-4' },
   {
     id: 'b4-cat-1',

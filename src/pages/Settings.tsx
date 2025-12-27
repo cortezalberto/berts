@@ -66,7 +66,7 @@ export function SettingsPage() {
 
       if (downloadLinkRef.current) {
         downloadLinkRef.current.href = url
-        downloadLinkRef.current.download = `barijho-backup-${new Date().toISOString().split('T')[0]}.json`
+        downloadLinkRef.current.download = `buen-sabor-backup-${new Date().toISOString().split('T')[0]}.json`
         downloadLinkRef.current.click()
         // Delay revoke to ensure download starts
         setTimeout(() => URL.revokeObjectURL(url), 1000)

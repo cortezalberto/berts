@@ -17,7 +17,7 @@ interface SubcategoryState {
 
 const generateId = () => crypto.randomUUID()
 
-// Initial mock subcategories - Branch 1 (Barijho Centro)
+// Initial mock subcategories - Branch 1 (Buen Sabor Centro)
 const initialSubcategories: Subcategory[] = [
   // Food subcategories (category_id: 'b1-cat-1')
   {
@@ -118,7 +118,7 @@ const initialSubcategories: Subcategory[] = [
     order: 3,
     is_active: true,
   },
-  // Branch 2 - Barijho Norte (Comidas)
+  // Branch 2 - Buen Sabor Norte (Comidas)
   {
     id: 'b2-sub-1',
     name: 'Pizzas',
@@ -144,7 +144,7 @@ const initialSubcategories: Subcategory[] = [
     order: 1,
     is_active: true,
   },
-  // Branch 3 - Barijho Sur (solo Comidas)
+  // Branch 3 - Buen Sabor Sur (solo Comidas)
   {
     id: 'b3-sub-1',
     name: 'Parrilla',
@@ -153,7 +153,7 @@ const initialSubcategories: Subcategory[] = [
     order: 1,
     is_active: true,
   },
-  // Branch 4 - Barijho Este (completo)
+  // Branch 4 - Buen Sabor Este (completo)
   {
     id: 'b4-sub-1',
     name: 'Sushi',
