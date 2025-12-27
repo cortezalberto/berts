@@ -43,28 +43,37 @@ export function Modal({
   useEffect(() => {
     if (!isOpen) return
 
+    // Use AbortController for clean listener removal
+    const abortController = new AbortController()
+
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onCloseRef.current()
     }
 
     // Track number of open modals to handle nested modals correctly
-    const currentOverflow = document.body.style.overflow
+    // Store the overflow value at mount time for this specific modal instance
+    const previousOverflow = document.body.style.overflow
     const modalCount = parseInt(document.body.dataset.modalCount || '0', 10)
-    document.body.dataset.modalCount = String(modalCount + 1)
+    const newCount = modalCount + 1
+    document.body.dataset.modalCount = String(newCount)
 
-    document.addEventListener('keydown', handleEscape)
+    document.addEventListener('keydown', handleEscape, { signal: abortController.signal })
     document.body.style.overflow = 'hidden'
 
     return () => {
-      document.removeEventListener('keydown', handleEscape)
+      // Abort all listeners registered with this controller
+      abortController.abort()
 
-      // Only restore overflow when last modal closes
-      const count = parseInt(document.body.dataset.modalCount || '1', 10)
-      document.body.dataset.modalCount = String(Math.max(0, count - 1))
+      // Decrement modal count safely
+      const currentCount = parseInt(document.body.dataset.modalCount || '1', 10)
+      const updatedCount = Math.max(0, currentCount - 1)
 
-      if (count <= 1) {
-        document.body.style.overflow = currentOverflow || ''
+      if (updatedCount === 0) {
+        // Last modal closing - restore original overflow and clean up
+        document.body.style.overflow = previousOverflow || ''
         delete document.body.dataset.modalCount
+      } else {
+        document.body.dataset.modalCount = String(updatedCount)
       }
     }
   }, [isOpen])

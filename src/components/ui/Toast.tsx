@@ -1,3 +1,4 @@
+import { memo, useCallback } from 'react'
 import { X, CheckCircle, AlertCircle, AlertTriangle, Info } from 'lucide-react'
 import { useToastStore } from '../../stores/toastStore'
 import type { Toast as ToastType } from '../../types'
@@ -16,9 +17,17 @@ const styleMap = {
   info: 'bg-blue-500/10 border-blue-500/30 text-blue-400',
 }
 
-function ToastItem({ toast }: { toast: ToastType }) {
-  const removeToast = useToastStore((s) => s.removeToast)
+interface ToastItemProps {
+  toast: ToastType
+  onRemove: (id: string) => void
+}
+
+const ToastItem = memo(function ToastItem({ toast, onRemove }: ToastItemProps) {
   const Icon = iconMap[toast.type]
+
+  const handleRemove = useCallback(() => {
+    onRemove(toast.id)
+  }, [onRemove, toast.id])
 
   return (
     <div
@@ -34,7 +43,7 @@ function ToastItem({ toast }: { toast: ToastType }) {
       <Icon className="w-5 h-5 flex-shrink-0" aria-hidden="true" />
       <p className="text-sm font-medium flex-1">{toast.message}</p>
       <button
-        onClick={() => removeToast(toast.id)}
+        onClick={handleRemove}
         className="p-1 hover:bg-white/10 rounded transition-colors"
         aria-label="Cerrar notificación"
       >
@@ -42,10 +51,11 @@ function ToastItem({ toast }: { toast: ToastType }) {
       </button>
     </div>
   )
-}
+})
 
 export function ToastContainer() {
   const toasts = useToastStore((s) => s.toasts)
+  const removeToast = useToastStore((s) => s.removeToast)
 
   if (toasts.length === 0) return null
 
@@ -56,7 +66,7 @@ export function ToastContainer() {
       aria-label="Notificaciones"
     >
       {toasts.map((toast) => (
-        <ToastItem key={toast.id} toast={toast} />
+        <ToastItem key={toast.id} toast={toast} onRemove={removeToast} />
       ))}
     </div>
   )

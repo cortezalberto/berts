@@ -36,7 +36,7 @@ export function Table<T extends { id: string }>({
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full" aria-label={ariaLabel}>
+      <table className="w-full" aria-label={ariaLabel || 'Tabla de datos'}>
         <thead>
           <tr className="border-b border-zinc-800">
             {columns.map((column) => (
@@ -66,6 +66,7 @@ export function Table<T extends { id: string }>({
               }}
               tabIndex={onRowClick ? 0 : undefined}
               role={onRowClick ? 'button' : undefined}
+              aria-label={onRowClick ? `Ver detalles del elemento` : undefined}
               className={`
                 border-b border-zinc-800/50
                 transition-colors duration-150

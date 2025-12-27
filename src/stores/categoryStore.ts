@@ -140,7 +140,14 @@ export const useCategoryStore = create<CategoryState>()(
           categories: state.categories.filter((cat) => cat.id !== id),
         })),
 
-      reorderCategories: (categories) => set({ categories }),
+      reorderCategories: (categories) => {
+        // Validate that categories array is valid before setting
+        if (!Array.isArray(categories)) {
+          console.warn('reorderCategories: Invalid categories array')
+          return
+        }
+        set({ categories })
+      },
 
       getByBranch: (branchId) => {
         return get()
@@ -157,29 +164,27 @@ export const useCategoryStore = create<CategoryState>()(
       name: STORAGE_KEYS.CATEGORIES,
       version: STORE_VERSIONS.CATEGORIES,
       migrate: (persistedState, version) => {
-        const state = persistedState as { categories: Category[] }
+        const persisted = persistedState as { categories: Category[] }
 
-        // Validate array exists
-        if (!Array.isArray(state.categories)) {
-          state.categories = initialCategories
-          return state
+        // Validate array exists - return new object, don't mutate
+        if (!Array.isArray(persisted.categories)) {
+          return { categories: initialCategories }
         }
+
+        let categories = persisted.categories
 
         // Version 3: Non-destructive merge - only add missing initial categories
         if (version < 3) {
-          const existingIds = new Set(state.categories.map(c => c.id))
+          const existingIds = new Set(categories.map(c => c.id))
           const missingCategories = initialCategories.filter(c => !existingIds.has(c.id))
-          state.categories = [...state.categories, ...missingCategories]
+          categories = [...categories, ...missingCategories]
         }
 
-        return state
+        return { categories }
       },
     }
   )
 )
 
-// Selectors - only use selectors that return stable references
-// For filtered data, use useMemo in components to avoid infinite loops
+// Selectors
 export const selectCategories = (state: CategoryState) => state.categories
-export const selectCategoryById = (id: string) => (state: CategoryState) =>
-  state.categories.find((c) => c.id === id)

@@ -99,7 +99,7 @@ export interface Product {
   name: string
   description: string
   price: number                    // Base price (used when use_branch_prices is false)
-  branch_prices: BranchPrice[]     // Per-branch pricing
+  branch_prices?: BranchPrice[]    // Per-branch pricing (optional, defaults to [])
   use_branch_prices: boolean       // Toggle for per-branch pricing mode
   image?: string                   // Optional image URL
   category_id: string
@@ -107,7 +107,7 @@ export interface Product {
   featured: boolean
   popular: boolean
   badge?: string
-  allergen_ids: string[]
+  allergen_ids?: string[]          // Optional, defaults to []
   is_active?: boolean
   stock?: number
   created_at?: string
@@ -161,16 +161,6 @@ export interface RestaurantFormData {
   email?: string
 }
 
-// Dashboard statistics
-export interface DashboardStats {
-  totalProducts: number
-  totalCategories: number
-  totalSubcategories: number
-  activeProducts: number
-  featuredProducts: number
-  popularProducts: number
-}
-
 // Table column definition for reusable table component
 export interface TableColumn<T> {
   key: keyof T | string
@@ -178,13 +168,6 @@ export interface TableColumn<T> {
   render?: (item: T) => React.ReactNode
   sortable?: boolean
   width?: string
-}
-
-// Modal state
-export interface ModalState {
-  isOpen: boolean
-  mode: 'create' | 'edit' | 'delete' | 'view'
-  data?: unknown
 }
 
 // Toast notification
@@ -311,15 +294,9 @@ export interface OrderHistory {
   staff_name?: string              // Nombre del mozo (snapshot)
   commands: OrderCommand[]         // Lista de comandas de esta sesion
   order_time: string               // Hora del primer pedido (HH:mm)
-  close_time?: string              // Hora de cierre (HH:mm), null si aun abierta
+  close_time: string | undefined   // Hora de cierre (HH:mm), undefined si aun abierta
   total: number                    // Suma de subtotales de todas las comandas
   status: 'abierta' | 'cerrada'    // Estado del registro
   created_at: string
   updated_at?: string
-}
-
-// Form data for creating a new command
-export interface OrderCommandFormData {
-  items: OrderCommandItem[]
-  notes?: string
 }

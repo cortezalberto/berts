@@ -29,6 +29,7 @@ import {
 import { toast } from '../stores/toastStore'
 import { validatePromotion, type ValidationErrors } from '../utils/validation'
 import { handleError } from '../utils/logger'
+import { formatPrice } from '../utils/constants'
 import { helpContent } from '../utils/helpContent'
 import type { Promotion, PromotionFormData, TableColumn } from '../types'
 
@@ -195,20 +196,16 @@ export function PromotionsPage() {
     return date.toLocaleDateString('es-AR')
   }
 
-  const formatPrice = (price: number): string => {
-    return new Intl.NumberFormat('es-AR', {
-      style: 'currency',
-      currency: 'ARS',
-    }).format(price)
-  }
-
-  const isPromotionActive = (promotion: Promotion) => {
+  const isPromotionActive = useCallback((promotion: Promotion) => {
     if (promotion.is_active === false) return false
+
+    // Use local date comparison to avoid timezone issues
     const now = new Date()
-    const start = new Date(promotion.start_date)
-    const end = new Date(promotion.end_date)
-    return now >= start && now <= end
-  }
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+
+    // Compare dates as strings (YYYY-MM-DD format)
+    return today >= promotion.start_date && today <= promotion.end_date
+  }, [])
 
   const columns: TableColumn<Promotion>[] = useMemo(
     () => [
@@ -353,7 +350,7 @@ export function PromotionsPage() {
         ),
       },
     ],
-    [getBranchNames, openEditModal, openDeleteDialog, promotionTypeMap]
+    [getBranchNames, openEditModal, openDeleteDialog, promotionTypeMap, isPromotionActive]
   )
 
   return (
@@ -610,3 +607,5 @@ export function PromotionsPage() {
     </PageContainer>
   )
 }
+
+export default PromotionsPage

@@ -6,6 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Restaurant Admin Dashboard ("Buen Sabor") for managing menu items with multi-branch support. Built with React 19, TypeScript, and Vite. The UI is in Spanish.
 
+**Name:** Buen Sabor (formerly "barijho" in old references)
+
 **Data Hierarchy:**
 ```
 Restaurant (1) → Branch (N) → Category (N) → Subcategory (N) → Product (N)
@@ -43,7 +45,7 @@ npm run preview   # Preview production build
 - `src/types/index.ts` - Centralized TypeScript interfaces
 - `src/hooks/` - Custom hooks (usePagination, useFocusTrap, useModal)
 - `src/utils/` - Constants, validation, and logging utilities
-- `src/services/` - API layer (empty, ready for backend integration)
+- `src/services/` - Service layer with cascadeService for delete operations
 
 ### State Management Pattern
 All Zustand stores use selectors for optimized re-renders. Never destructure from store calls:
@@ -91,47 +93,67 @@ const branchCategories = useMemo(() => {
 
 **Important:** The `selectBranchById` selector accepts `string | null`. Pass `selectedBranchId` directly without fallback to empty string.
 
-### Cascade Delete Pattern
-When deleting a branch, validate existence first and cascade delete all related data:
-```typescript
-// In handleDelete for branches:
-const branchExists = branches.some((b) => b.id === selectedBranch.id)
-if (!branchExists) return  // Validate before cascade
+### Cascade Delete Service
+All cascade delete operations are centralized in `src/services/cascadeService.ts` using dependency injection for testability. Use wrapper functions for convenience:
 
-const branchCategories = getByBranch(selectedBranch.id)
-const categoryIds = branchCategories.map((c) => c.id)
-if (categoryIds.length > 0) {
-  deleteByProductCategories(categoryIds)  // Delete products
-  deleteByCategories(categoryIds)         // Delete subcategories
+```typescript
+import {
+  deleteBranchWithCascade,
+  deleteCategoryWithCascade,
+  deleteSubcategoryWithCascade,
+  deleteProductWithCascade,
+  deleteAllergenWithCascade,
+  deletePromotionTypeWithCascade
+} from '../services/cascadeService'
+
+// Usage in handleDelete callbacks:
+const handleDelete = useCallback(() => {
+  if (!selectedBranch) return
+
+  const result = deleteBranchWithCascade(selectedBranch.id)
+
+  if (!result.success) {
+    toast.error(result.error || 'Error al eliminar')
+    return
+  }
+
+  toast.success('Eliminado correctamente')
+}, [selectedBranch])
+```
+
+**Wrapper functions** (convenience, auto-inject stores):
+- `deleteBranchWithCascade(id)` - Deletes promotions → products → subcategories → categories → tables → orderHistory → branch
+- `deleteCategoryWithCascade(id)` - Deletes products → subcategories → category (cleans promotions first)
+- `deleteSubcategoryWithCascade(id)` - Deletes products → subcategory (cleans promotions first)
+- `deleteProductWithCascade(id)` - Cleans product from promotions → deletes product
+- `deleteAllergenWithCascade(id)` - Cleans allergen from products → deletes allergen
+- `deletePromotionTypeWithCascade(id)` - Deletes related promotions → deletes type
+
+**Core functions** (for testing with injected stores):
+- `cascadeDeleteBranch(id, stores)` - accepts store actions as parameter
+- `cascadeDeleteCategory(id, stores)` - etc.
+
+All functions return `CascadeDeleteResult`:
+```typescript
+interface CascadeDeleteResult {
+  success: boolean
+  deletedCounts: { categories?: number; products?: number; ... }
+  error?: string
 }
-deleteByBranchCategory(selectedBranch.id) // Delete categories
-removeBranchFromPromotions(selectedBranch.id) // Remove from promotions (deletes if empty)
-deleteBranch(selectedBranch.id)           // Delete branch
 ```
 
-When deleting allergens, clean orphan references first, then delete:
+### Code Splitting
+All pages use React.lazy() for code splitting. See `App.tsx`:
 ```typescript
-// Validate existence first
-const allergenExists = allergens.some((a) => a.id === allergenId)
-if (!allergenExists) return
+import { lazy, Suspense } from 'react'
 
-removeAllergenFromProducts(allergenId)  // Clean allergen_ids arrays FIRST
-deleteAllergen(allergenId)              // Then delete allergen
-```
+const DashboardPage = lazy(() => import('./pages/Dashboard'))
+// ... all 17 pages
 
-When deleting promotion types, validate existence and delete related promotions:
-```typescript
-// Validate existence first
-const typeExists = promotionTypes.some((pt) => pt.id === typeId)
-if (!typeExists) return
-
-clearPromotionType(typeId)  // Deletes all promotions with this type
-deletePromotionType(typeId)
-```
-
-When deleting products, promotions that become empty are also deleted:
-```typescript
-removeProductFromPromotions(productId)  // Removes product, deletes empty promotions
+// In routes:
+<Suspense fallback={<PageLoader />}>
+  <Route path="/" element={<DashboardPage />} />
+</Suspense>
 ```
 
 ### Constants and Configuration
@@ -139,10 +161,11 @@ All magic strings and configuration live in `src/utils/constants.ts`:
 - `HOME_CATEGORY_NAME` - Special category name filter ('Home')
 - `STORAGE_KEYS` - localStorage persistence keys (branches, categories, subcategories, products, allergens, promotion-types, promotions, restaurant)
 - `STORE_VERSIONS` - For Zustand persist migrations (increment when changing data structure)
+- `VALIDATION_LIMITS` - Centralized validation limits (MIN_NAME_LENGTH, MAX_NAME_LENGTH, MAX_DESCRIPTION_LENGTH, MAX_PRICE, MAX_TOASTS, etc.)
 - `LOCALE` - Currency (ARS) and language (es-AR)
 - `PATTERNS` - Validation regex patterns
+- `generateId()` - Centralized UUID generator using `crypto.randomUUID()`
 - `formatPrice(price)` - Centralized price formatter with edge case handling
-- `sanitizeText(text)` - HTML escape for XSS prevention
 
 ### Validation
 Centralized validation in `src/utils/validation.ts`. Always use these validators instead of inline validation:
@@ -152,6 +175,20 @@ const { isValid, errors } = validateCategory(formData)
 
 // In state declaration:
 const [errors, setErrors] = useState<ValidationErrors<CategoryFormData>>({})
+```
+
+**Number validation helpers** (exported from validation.ts):
+```typescript
+import { isValidNumber, isPositiveNumber, isNonNegativeNumber } from '../utils/validation'
+
+// isValidNumber(value) - true if finite, non-NaN number
+// isPositiveNumber(value) - true if > 0
+// isNonNegativeNumber(value) - true if >= 0
+
+// Usage in custom validation:
+if (!isPositiveNumber(data.price)) {
+  errors.price = 'El precio debe ser mayor a 0'
+}
 ```
 
 ### Error Handling
@@ -230,9 +267,10 @@ interface BranchPrice {
 }
 
 interface Product {
-  price: number                  // Base price (used when use_branch_prices is false)
-  branch_prices: BranchPrice[]   // Per-branch pricing
-  use_branch_prices: boolean     // Toggle for per-branch mode
+  price: number                   // Base price (used when use_branch_prices is false)
+  branch_prices?: BranchPrice[]   // Per-branch pricing (optional, defaults to [])
+  use_branch_prices: boolean      // Toggle for per-branch mode
+  allergen_ids?: string[]         // Optional, defaults to []
   // ...other fields
 }
 ```
@@ -418,19 +456,21 @@ Help content is centralized in `src/utils/helpContent.tsx` with entries for: das
 ```
 
 ### Accessibility
-- Modal component includes focus trap via `useFocusTrap` hook
+- Modal component includes focus trap via `useFocusTrap` hook (uses AbortController for cleanup)
 - Skip link in Layout for keyboard navigation
 - aria-labels on icon-only buttons (use proper Spanish accents: "página", "notificación")
 - Screen reader text (`sr-only`) in Badge components for status context
-- Table component supports keyboard navigation (Enter/Space) for clickable rows and requires `ariaLabel` prop
+- Table component supports keyboard navigation (Enter/Space) for clickable rows; has default `ariaLabel="Tabla de datos"`
+- Button component has `aria-busy` and sr-only "Cargando" text when `isLoading=true`
 - Loading states include `role="status"` and sr-only text
 - Icons use `aria-hidden="true"` when decorative, `aria-label` when meaningful
 - HelpButton provides contextual help for each page
-- Toast notifications use `role="alert"` and `aria-live` (assertive for errors, polite for others)
+- Toast notifications use `role="alert"` and `aria-live` (assertive for errors, polite for others); ToastItem is memoized
 - Form inputs use `useId()` hook for unique IDs (never hardcode IDs)
+- Input component automatically links errors via `aria-describedby`
 
 ### Store Migrations
-When modifying data structure, increment version in `STORE_VERSIONS` and add migrate function. **Always use non-destructive merging** to preserve user data:
+When modifying data structure, increment version in `STORE_VERSIONS` and add migrate function. **Always use immutable patterns** (never mutate persisted state directly):
 ```typescript
 persist(
   (set, get) => ({ ... }),
@@ -438,30 +478,33 @@ persist(
     name: STORAGE_KEYS.PRODUCTS,
     version: STORE_VERSIONS.PRODUCTS,
     migrate: (persistedState, version) => {
-      const state = persistedState as { products: Product[] }
+      const persisted = persistedState as { products: Product[] }
+
+      // Use local variables, never mutate persisted directly
+      let products = persisted.products
 
       // Validate array exists
-      if (!Array.isArray(state.products)) {
-        state.products = initialProducts
-        return state
+      if (!Array.isArray(products)) {
+        return { products: initialProducts }
       }
 
       // Non-destructive merge: only add missing initial items
       if (version < 4) {
-        const existingIds = new Set(state.products.map(p => p.id))
+        const existingIds = new Set(products.map(p => p.id))
         const missing = initialProducts.filter(p => !existingIds.has(p.id))
-        state.products = [...state.products, ...missing]
+        products = [...products, ...missing]
       }
 
       // Add new fields with defaults
       if (version < 5) {
-        state.products = state.products.map(p => ({
+        products = products.map(p => ({
           ...p,
           newField: p.newField ?? defaultValue,
         }))
       }
 
-      return state
+      // Return new object, don't mutate original
+      return { products }
     },
   }
 )
@@ -600,13 +643,6 @@ if (!sanitized) {
 }
 ```
 
-### Text Sanitization
-Use `sanitizeText()` from constants when rendering user input in contexts where HTML could be interpreted:
-```typescript
-import { sanitizeText } from '../utils/constants'
-const safe = sanitizeText(userInput)  // Escapes &, <, >, ", '
-```
-
 ### Validation Consistency
 All validators in `validation.ts` use:
 - `MIN_NAME_LENGTH = 2`, `MAX_NAME_LENGTH = 100` for name fields
@@ -614,7 +650,8 @@ All validators in `validation.ts` use:
 - `isValidPhone()` for phone validation (accepts formats like +54 11 1234-5678)
 - Local timezone helpers (`getLocalDateString`, `getLocalTimeString`) for date/time comparisons
 - Trimmed input before validation
-- Prices must be > 0 (not just >= 0)
+- Prices must be > 0 and finite (`Number.isFinite()` check)
+- Order fields have max limit of 9999
 
 ### Number Input Handling
 Always use safe parsing for number inputs to handle edge cases:

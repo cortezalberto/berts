@@ -76,6 +76,24 @@ export const DEFAULTS = {
   ITEMS_PER_PAGE: 10,
 } as const
 
+// Validation limits - centralized for consistency across all validators
+export const VALIDATION_LIMITS = {
+  MIN_NAME_LENGTH: 2,
+  MAX_NAME_LENGTH: 100,
+  MAX_DESCRIPTION_LENGTH: 500,
+  MAX_ADDRESS_LENGTH: 200,
+  MAX_ORDER_VALUE: 9999,
+  MAX_CAPACITY: 999,
+  MAX_PRICE: 999999999,
+  MAX_TOASTS: 5,
+} as const
+
+/**
+ * Generate a unique ID using crypto.randomUUID()
+ * Centralized to avoid duplication across stores
+ */
+export const generateId = (): string => crypto.randomUUID()
+
 // Centralized price formatter using locale settings
 export function formatPrice(price: number): string {
   // Handle edge cases
@@ -86,14 +104,4 @@ export function formatPrice(price: number): string {
     style: 'currency',
     currency: LOCALE.CURRENCY,
   }).format(price)
-}
-
-// Sanitize text input to prevent XSS (basic HTML escape)
-export function sanitizeText(text: string): string {
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;')
 }

@@ -18,7 +18,7 @@ import {
   usePromotionTypeStore,
   selectPromotionTypes,
 } from '../stores/promotionTypeStore'
-import { usePromotionStore } from '../stores/promotionStore'
+import { cascadeDeletePromotionType } from '../services/cascadeService'
 import { toast } from '../stores/toastStore'
 import { validatePromotionType, type ValidationErrors } from '../utils/validation'
 import { handleError } from '../utils/logger'
@@ -36,8 +36,6 @@ export function PromotionTypesPage() {
   const promotionTypes = usePromotionTypeStore(selectPromotionTypes)
   const addPromotionType = usePromotionTypeStore((s) => s.addPromotionType)
   const updatePromotionType = usePromotionTypeStore((s) => s.updatePromotionType)
-  const deletePromotionType = usePromotionTypeStore((s) => s.deletePromotionType)
-  const clearPromotionType = usePromotionStore((s) => s.clearPromotionType)
 
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
@@ -113,24 +111,21 @@ export function PromotionTypesPage() {
     if (!selectedType) return
 
     try {
-      // Validate promotion type exists before delete
-      const typeExists = promotionTypes.some((pt) => pt.id === selectedType.id)
-      if (!typeExists) {
-        toast.error('El tipo de promocion ya no existe')
+      const result = cascadeDeletePromotionType(selectedType.id)
+
+      if (!result.success) {
+        toast.error(result.error || 'Error al eliminar el tipo de promocion')
         setIsDeleteOpen(false)
         return
       }
 
-      // Delete promotions that use this type first, then delete the type
-      clearPromotionType(selectedType.id)
-      deletePromotionType(selectedType.id)
       toast.success('Tipo de promocion eliminado correctamente')
       setIsDeleteOpen(false)
     } catch (error) {
       const message = handleError(error, 'PromotionTypesPage.handleDelete')
       toast.error(`Error al eliminar el tipo de promocion: ${message}`)
     }
-  }, [selectedType, promotionTypes, clearPromotionType, deletePromotionType])
+  }, [selectedType])
 
   const columns: TableColumn<PromotionType>[] = useMemo(
     () => [
@@ -338,3 +333,5 @@ export function PromotionTypesPage() {
     </PageContainer>
   )
 }
+
+export default PromotionTypesPage

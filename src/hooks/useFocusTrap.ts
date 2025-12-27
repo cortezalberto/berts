@@ -8,6 +8,14 @@ const FOCUSABLE_SELECTORS = [
   'textarea:not([disabled])',
   '[tabindex]:not([tabindex="-1"])',
   '[contenteditable="true"]',
+  '[role="button"]:not([aria-disabled="true"])',
+  '[role="menuitem"]:not([aria-disabled="true"])',
+  '[role="option"]:not([aria-disabled="true"])',
+  '[role="link"]',
+  '[role="checkbox"]:not([aria-disabled="true"])',
+  '[role="radio"]:not([aria-disabled="true"])',
+  '[role="switch"]:not([aria-disabled="true"])',
+  'details > summary',
 ].join(', ')
 
 export function useFocusTrap<T extends HTMLElement>(
@@ -15,8 +23,6 @@ export function useFocusTrap<T extends HTMLElement>(
 ): RefObject<T | null> {
   const containerRef = useRef<T>(null)
   const previousActiveElement = useRef<Element | null>(null)
-  // Track if handler is registered to prevent duplicates
-  const handlerRef = useRef<((e: KeyboardEvent) => void) | null>(null)
 
   // Memoize the handler to get fresh focusable elements on each keydown
   const createHandler = useCallback((container: HTMLElement) => {
@@ -65,17 +71,16 @@ export function useFocusTrap<T extends HTMLElement>(
     const focusableElements = container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTORS)
     focusableElements[0]?.focus()
 
-    // Create and store handler
+    // Use AbortController for clean event listener management
+    const abortController = new AbortController()
+    const { signal } = abortController
+
     const handler = createHandler(container)
-    handlerRef.current = handler
-    container.addEventListener('keydown', handler)
+    container.addEventListener('keydown', handler, { signal })
 
     return () => {
-      // Clean up handler
-      if (handlerRef.current) {
-        container.removeEventListener('keydown', handlerRef.current)
-        handlerRef.current = null
-      }
+      // Abort all event listeners registered with this signal
+      abortController.abort()
 
       // Restore focus to the previously focused element (if still in DOM)
       const prev = previousActiveElement.current

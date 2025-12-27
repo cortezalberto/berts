@@ -1,4 +1,4 @@
-import { PATTERNS, TABLE_DEFAULT_TIME } from './constants'
+import { PATTERNS, TABLE_DEFAULT_TIME, VALIDATION_LIMITS } from './constants'
 import type {
   RestaurantFormData,
   BranchFormData,
@@ -18,11 +18,35 @@ export interface ValidationResult<T> {
   errors: ValidationErrors<T>
 }
 
-// Validation constants
-const MIN_NAME_LENGTH = 2
-const MAX_NAME_LENGTH = 100
-const MAX_DESCRIPTION_LENGTH = 500
-const MAX_ADDRESS_LENGTH = 200
+// Use centralized validation limits
+const {
+  MIN_NAME_LENGTH,
+  MAX_NAME_LENGTH,
+  MAX_DESCRIPTION_LENGTH,
+  MAX_ADDRESS_LENGTH,
+} = VALIDATION_LIMITS
+
+/**
+ * Validates that a value is a finite, non-NaN number
+ * Handles edge cases like Infinity, -Infinity, NaN
+ */
+export function isValidNumber(value: unknown): value is number {
+  return typeof value === 'number' && !isNaN(value) && Number.isFinite(value)
+}
+
+/**
+ * Validates that a value is a positive number (> 0)
+ */
+export function isPositiveNumber(value: unknown): value is number {
+  return isValidNumber(value) && value > 0
+}
+
+/**
+ * Validates that a value is a non-negative number (>= 0)
+ */
+export function isNonNegativeNumber(value: unknown): value is number {
+  return isValidNumber(value) && value >= 0
+}
 
 // Phone validation: accepts formats like +54 11 1234-5678, (011) 4567-8901, etc.
 function isValidPhone(phone: string): boolean {
@@ -110,20 +134,15 @@ export function validateBranch(data: BranchFormData): ValidationResult<BranchFor
     errors.closing_time = 'Horario de cierre inválido (formato HH:mm)'
   }
 
-  // Validate opening_time < closing_time (if both are valid)
+  // Validate times are different (allows overnight hours like 20:00 - 02:00)
   if (
     data.opening_time &&
     data.closing_time &&
     PATTERNS.TIME.test(data.opening_time) &&
     PATTERNS.TIME.test(data.closing_time)
   ) {
-    const [openHour, openMin] = data.opening_time.split(':').map(Number)
-    const [closeHour, closeMin] = data.closing_time.split(':').map(Number)
-    const openMinutes = openHour * 60 + openMin
-    const closeMinutes = closeHour * 60 + closeMin
-
-    if (openMinutes >= closeMinutes) {
-      errors.closing_time = 'El horario de cierre debe ser posterior al de apertura'
+    if (data.opening_time === data.closing_time) {
+      errors.closing_time = 'El horario de cierre debe ser diferente al de apertura'
     }
   }
 
@@ -133,8 +152,17 @@ export function validateBranch(data: BranchFormData): ValidationResult<BranchFor
   }
 }
 
+// Category validation options
+interface CategoryValidationOptions {
+  existingCategories?: Array<{ id: string; branch_id: string; name: string }>
+  editingCategoryId?: string
+}
+
 // Category validation
-export function validateCategory(data: CategoryFormData): ValidationResult<CategoryFormData> {
+export function validateCategory(
+  data: CategoryFormData,
+  options: CategoryValidationOptions = {}
+): ValidationResult<CategoryFormData> {
   const errors: ValidationErrors<CategoryFormData> = {}
 
   const trimmedName = data.name.trim()
@@ -144,15 +172,28 @@ export function validateCategory(data: CategoryFormData): ValidationResult<Categ
     errors.name = `El nombre debe tener al menos ${MIN_NAME_LENGTH} caracteres`
   } else if (trimmedName.length > MAX_NAME_LENGTH) {
     errors.name = `El nombre no puede exceder ${MAX_NAME_LENGTH} caracteres`
+  } else if (data.branch_id && options.existingCategories) {
+    // Check uniqueness: no other category with same name in same branch
+    const duplicate = options.existingCategories.find(
+      (c) =>
+        c.branch_id === data.branch_id &&
+        c.name.toLowerCase() === trimmedName.toLowerCase() &&
+        c.id !== options.editingCategoryId
+    )
+    if (duplicate) {
+      errors.name = `Ya existe una categoría "${trimmedName}" en esta sucursal`
+    }
   }
 
   if (!data.branch_id) {
     errors.branch_id = 'La sucursal es requerida'
   }
 
-  // Validate order is a non-negative number
-  if (typeof data.order !== 'number' || isNaN(data.order) || data.order < 0) {
-    errors.order = 'El orden debe ser un número positivo'
+  // Validate order is a non-negative number with limits
+  if (!isNonNegativeNumber(data.order)) {
+    errors.order = 'El orden debe ser un número mayor o igual a 0'
+  } else if (data.order > 9999) {
+    errors.order = 'El orden no puede exceder 9999'
   }
 
   return {
@@ -161,8 +202,17 @@ export function validateCategory(data: CategoryFormData): ValidationResult<Categ
   }
 }
 
+// Subcategory validation options
+interface SubcategoryValidationOptions {
+  existingSubcategories?: Array<{ id: string; category_id: string; name: string }>
+  editingSubcategoryId?: string
+}
+
 // Subcategory validation
-export function validateSubcategory(data: SubcategoryFormData): ValidationResult<SubcategoryFormData> {
+export function validateSubcategory(
+  data: SubcategoryFormData,
+  options: SubcategoryValidationOptions = {}
+): ValidationResult<SubcategoryFormData> {
   const errors: ValidationErrors<SubcategoryFormData> = {}
 
   const trimmedName = data.name.trim()
@@ -172,15 +222,28 @@ export function validateSubcategory(data: SubcategoryFormData): ValidationResult
     errors.name = `El nombre debe tener al menos ${MIN_NAME_LENGTH} caracteres`
   } else if (trimmedName.length > MAX_NAME_LENGTH) {
     errors.name = `El nombre no puede exceder ${MAX_NAME_LENGTH} caracteres`
+  } else if (data.category_id && options.existingSubcategories) {
+    // Check uniqueness: no other subcategory with same name in same category
+    const duplicate = options.existingSubcategories.find(
+      (s) =>
+        s.category_id === data.category_id &&
+        s.name.toLowerCase() === trimmedName.toLowerCase() &&
+        s.id !== options.editingSubcategoryId
+    )
+    if (duplicate) {
+      errors.name = `Ya existe una subcategoría "${trimmedName}" en esta categoría`
+    }
   }
 
   if (!data.category_id) {
     errors.category_id = 'La categoria es requerida'
   }
 
-  // Validate order is a non-negative number
-  if (typeof data.order !== 'number' || isNaN(data.order) || data.order < 0) {
-    errors.order = 'El orden debe ser un número positivo'
+  // Validate order is a non-negative number with limits
+  if (!isNonNegativeNumber(data.order)) {
+    errors.order = 'El orden debe ser un número mayor o igual a 0'
+  } else if (data.order > 9999) {
+    errors.order = 'El orden no puede exceder 9999'
   }
 
   return {
@@ -230,13 +293,13 @@ export function validateProduct(data: ProductFormData): ProductValidationResult 
 
     // Validate each active branch price
     activeBranchPrices.forEach(bp => {
-      if (typeof bp.price !== 'number' || isNaN(bp.price) || bp.price <= 0) {
+      if (!isPositiveNumber(bp.price)) {
         branchPriceErrors[bp.branch_id] = 'El precio debe ser mayor a 0'
       }
     })
   } else {
     // Single price mode: validate base price
-    if (typeof data.price !== 'number' || isNaN(data.price) || data.price <= 0) {
+    if (!isPositiveNumber(data.price)) {
       errors.price = 'El precio debe ser un numero mayor a 0'
     }
   }
@@ -334,7 +397,7 @@ export function validatePromotion(
     errors.name = `El nombre no puede exceder ${MAX_NAME_LENGTH} caracteres`
   }
 
-  if (typeof data.price !== 'number' || isNaN(data.price) || data.price <= 0) {
+  if (!isPositiveNumber(data.price)) {
     errors.price = 'El precio debe ser un numero mayor a 0'
   }
 
@@ -384,7 +447,7 @@ export function validatePromotion(
   } else {
     // Validate each item has quantity > 0
     const invalidItem = data.items.find(
-      (item) => typeof item.quantity !== 'number' || isNaN(item.quantity) || item.quantity < 1
+      (item) => !isPositiveNumber(item.quantity)
     )
     if (invalidItem) {
       errors.items = 'Cada producto debe tener una cantidad mayor a 0'
@@ -418,7 +481,7 @@ export function validateTable(
     errors.branch_id = 'La sucursal es requerida'
   }
 
-  if (typeof data.number !== 'number' || isNaN(data.number) || data.number < 1) {
+  if (!isPositiveNumber(data.number)) {
     errors.number = 'El numero de mesa debe ser mayor a 0'
   } else if (data.branch_id && options.existingTables) {
     // Check uniqueness: no other table with same number in same branch
@@ -433,7 +496,7 @@ export function validateTable(
     }
   }
 
-  if (typeof data.capacity !== 'number' || isNaN(data.capacity) || data.capacity < 1) {
+  if (!isPositiveNumber(data.capacity)) {
     errors.capacity = 'La capacidad debe ser al menos 1 comensal'
   } else if (data.capacity > 50) {
     errors.capacity = 'La capacidad no puede exceder 50 comensales'

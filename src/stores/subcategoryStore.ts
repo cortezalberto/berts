@@ -254,29 +254,27 @@ export const useSubcategoryStore = create<SubcategoryState>()(
       name: STORAGE_KEYS.SUBCATEGORIES,
       version: STORE_VERSIONS.SUBCATEGORIES,
       migrate: (persistedState, version) => {
-        const state = persistedState as { subcategories: Subcategory[] }
+        const persisted = persistedState as { subcategories: Subcategory[] }
 
-        // Validate array exists
-        if (!Array.isArray(state.subcategories)) {
-          state.subcategories = initialSubcategories
-          return state
+        // Validate array exists - return new object, don't mutate
+        if (!Array.isArray(persisted.subcategories)) {
+          return { subcategories: initialSubcategories }
         }
+
+        let subcategories = persisted.subcategories
 
         // Version 3: Non-destructive merge - only add missing initial subcategories
         if (version < 3) {
-          const existingIds = new Set(state.subcategories.map(s => s.id))
+          const existingIds = new Set(subcategories.map(s => s.id))
           const missingSubcategories = initialSubcategories.filter(s => !existingIds.has(s.id))
-          state.subcategories = [...state.subcategories, ...missingSubcategories]
+          subcategories = [...subcategories, ...missingSubcategories]
         }
 
-        return state
+        return { subcategories }
       },
     }
   )
 )
 
-// Selectors - only use selectors that return stable references
-// For filtered data, use useMemo in components to avoid infinite loops
+// Selectors
 export const selectSubcategories = (state: SubcategoryState) => state.subcategories
-export const selectSubcategoryById = (id: string) => (state: SubcategoryState) =>
-  state.subcategories.find((s) => s.id === id)

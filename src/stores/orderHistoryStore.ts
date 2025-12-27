@@ -37,11 +37,22 @@ interface OrderHistoryState {
 
 const generateId = () => crypto.randomUUID()
 
+/**
+ * Get local date string in YYYY-MM-DD format
+ * Uses local timezone consistently (not UTC)
+ */
 const getLocalDateString = () => {
   const now = new Date()
-  return now.toISOString().split('T')[0]
+  const year = now.getFullYear()
+  const month = String(now.getMonth() + 1).padStart(2, '0')
+  const day = String(now.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
 }
 
+/**
+ * Get local time string in HH:mm format
+ * Uses local timezone consistently
+ */
 const getLocalTimeString = () => {
   const now = new Date()
   return now.toTimeString().slice(0, 5)
@@ -168,20 +179,21 @@ export const useOrderHistoryStore = create<OrderHistoryState>()(
       name: STORAGE_KEYS.ORDER_HISTORY,
       version: STORE_VERSIONS.ORDER_HISTORY,
       migrate: (persistedState, version) => {
-        const state = persistedState as { orderHistory: OrderHistory[] }
+        const persisted = persistedState as { orderHistory: OrderHistory[] }
 
-        // Ensure orderHistory array exists
-        if (!Array.isArray(state.orderHistory)) {
-          state.orderHistory = initialOrderHistory
-          return state
+        // Ensure orderHistory array exists - return new object, don't mutate
+        if (!Array.isArray(persisted.orderHistory)) {
+          return { orderHistory: initialOrderHistory }
         }
+
+        const orderHistory = persisted.orderHistory
 
         // Future migrations here
         if (version < 1) {
           // Initial version, nothing to migrate
         }
 
-        return state
+        return { orderHistory }
       },
     }
   )
@@ -189,9 +201,3 @@ export const useOrderHistoryStore = create<OrderHistoryState>()(
 
 // Selectors
 export const selectOrderHistory = (state: OrderHistoryState) => state.orderHistory
-export const selectOrderHistoryById = (id: string) => (state: OrderHistoryState) =>
-  state.orderHistory.find((h) => h.id === id)
-export const selectActiveOrderHistoryByTable = (tableId: string) => (state: OrderHistoryState) =>
-  state.orderHistory.find((h) => h.table_id === tableId && h.status === 'abierta')
-export const selectOrderHistoryByBranch = (branchId: string) => (state: OrderHistoryState) =>
-  state.orderHistory.filter((h) => h.branch_id === branchId)

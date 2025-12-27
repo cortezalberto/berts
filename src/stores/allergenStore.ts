@@ -139,28 +139,27 @@ export const useAllergenStore = create<AllergenState>()(
       name: STORAGE_KEYS.ALLERGENS,
       version: STORE_VERSIONS.ALLERGENS,
       migrate: (persistedState, version) => {
-        const state = persistedState as { allergens: Allergen[] }
+        const persisted = persistedState as { allergens: Allergen[] }
 
-        // Ensure allergens array exists
-        if (!Array.isArray(state.allergens)) {
-          state.allergens = initialAllergens
-          return state
+        // Ensure allergens array exists - return new object, don't mutate
+        if (!Array.isArray(persisted.allergens)) {
+          return { allergens: initialAllergens }
         }
+
+        let allergens = persisted.allergens
 
         // Version 2: Non-destructive merge - only add missing initial allergens
         if (version < 2) {
-          const existingIds = new Set(state.allergens.map(a => a.id))
+          const existingIds = new Set(allergens.map(a => a.id))
           const missingAllergens = initialAllergens.filter(a => !existingIds.has(a.id))
-          state.allergens = [...state.allergens, ...missingAllergens]
+          allergens = [...allergens, ...missingAllergens]
         }
 
-        return state
+        return { allergens }
       },
     }
   )
 )
 
-// Selectors - only use selectors that return stable references
+// Selectors
 export const selectAllergens = (state: AllergenState) => state.allergens
-export const selectAllergenById = (id: string) => (state: AllergenState) =>
-  state.allergens.find((a) => a.id === id)

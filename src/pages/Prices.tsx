@@ -25,7 +25,7 @@ import {
 } from '../stores/branchStore'
 import { toast } from '../stores/toastStore'
 import { handleError } from '../utils/logger'
-import { HOME_CATEGORY_NAME } from '../utils/constants'
+import { HOME_CATEGORY_NAME, formatPrice } from '../utils/constants'
 import { helpContent } from '../utils/helpContent'
 import type { Product, TableColumn, BranchPrice } from '../types'
 
@@ -118,13 +118,6 @@ export function PricesPage() {
     [categories]
   )
 
-  const formatPrice = (price: number): string => {
-    return new Intl.NumberFormat('es-AR', {
-      style: 'currency',
-      currency: 'ARS',
-    }).format(price)
-  }
-
   // Get price display for a product
   const getPriceDisplay = (product: Product): { text: string; detail?: string } => {
     const branchPrices = product.branch_prices ?? []
@@ -187,7 +180,9 @@ export function PricesPage() {
 
     setIsSaving(true)
     try {
+      // Only update price-related fields to preserve other product data
       updateProduct(editingProduct.id, {
+        ...editingProduct,
         price: priceEdits.price,
         branch_prices: priceEdits.branchPrices,
         use_branch_prices: priceEdits.useBranchPrices,
@@ -717,3 +712,5 @@ export function PricesPage() {
     </PageContainer>
   )
 }
+
+export default PricesPage

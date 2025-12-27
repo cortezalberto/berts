@@ -41,10 +41,11 @@ export function usePagination<T>(
       // Use functional update to avoid calling setState synchronously within effect
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setCurrentPageInternal(1)
-      // Reset flag after state update
-      requestAnimationFrame(() => {
+      // Reset flag after state update using rAF with cleanup to prevent memory leaks
+      const rafId = requestAnimationFrame(() => {
         isResettingRef.current = false
       })
+      return () => cancelAnimationFrame(rafId)
     }
   }, [currentPage, totalPages])
 

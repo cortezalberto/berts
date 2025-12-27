@@ -128,39 +128,42 @@ export const useBranchStore = create<BranchState>()(
       name: STORAGE_KEYS.BRANCHES,
       version: STORE_VERSIONS.BRANCHES,
       migrate: (persistedState, version) => {
-        const state = persistedState as { branches: Branch[]; selectedBranchId: string | null }
+        const persisted = persistedState as { branches: Branch[]; selectedBranchId: string | null }
 
-        // Ensure branches array exists
-        if (!Array.isArray(state.branches)) {
-          state.branches = initialBranches
-          state.selectedBranchId = null
-          return state
+        // Ensure branches array exists - return new object, don't mutate
+        if (!Array.isArray(persisted.branches)) {
+          return {
+            branches: initialBranches,
+            selectedBranchId: null,
+          }
         }
 
+        let branches = persisted.branches
+        let selectedBranchId = persisted.selectedBranchId
+
         // Version 2: Merge with initial branches (non-destructive)
-        // Only add initial branches that don't exist in user data
         if (version < 2) {
-          const existingIds = new Set(state.branches.map(b => b.id))
+          const existingIds = new Set(branches.map(b => b.id))
           const missingBranches = initialBranches.filter(b => !existingIds.has(b.id))
-          state.branches = [...state.branches, ...missingBranches]
-          state.selectedBranchId = null
+          branches = [...branches, ...missingBranches]
+          selectedBranchId = null
         }
 
         // Version 3: Reset selectedBranchId to null (no default selection)
         if (version < 3) {
-          state.selectedBranchId = null
+          selectedBranchId = null
         }
 
         // Version 4: Add opening_time and closing_time fields
         if (version < 4) {
-          state.branches = state.branches.map((branch) => ({
+          branches = branches.map((branch) => ({
             ...branch,
             opening_time: branch.opening_time ?? BRANCH_DEFAULT_OPENING_TIME,
             closing_time: branch.closing_time ?? BRANCH_DEFAULT_CLOSING_TIME,
           }))
         }
 
-        return state
+        return { branches, selectedBranchId }
       },
     }
   )

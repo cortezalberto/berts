@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useId } from 'react'
+import { useState, useMemo, useCallback, useId, useEffect } from 'react'
 import { Plus, Trash2, Users, Archive, Clock } from 'lucide-react'
 import { PageContainer } from '../components/layout'
 import {
@@ -230,6 +230,13 @@ export function TablesPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [filterBranchId, setFilterBranchId] = useState<string>(() => branches[0]?.id || '')
   const [filterStatus, setFilterStatus] = useState<string>('')
+
+  // Sync filterBranchId when branches load or change
+  useEffect(() => {
+    if (branches.length > 0 && !branches.some((b) => b.id === filterBranchId)) {
+      setFilterBranchId(branches[0].id)
+    }
+  }, [branches, filterBranchId])
 
   // Unique IDs for form fields
   const filterBranchSelectId = useId()
@@ -749,3 +756,5 @@ export function TablesPage() {
     </PageContainer>
   )
 }
+
+export default TablesPage

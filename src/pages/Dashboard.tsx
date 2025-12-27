@@ -183,3 +183,5 @@ export function DashboardPage() {
     </PageContainer>
   )
 }
+
+export default DashboardPage

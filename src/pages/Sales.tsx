@@ -22,3 +22,5 @@ export function SalesPage() {
     </PageContainer>
   )
 }
+
+export default SalesPage

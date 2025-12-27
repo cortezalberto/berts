@@ -428,39 +428,36 @@ export const useProductStore = create<ProductState>()(
       name: STORAGE_KEYS.PRODUCTS,
       version: STORE_VERSIONS.PRODUCTS,
       migrate: (persistedState, version) => {
-        const state = persistedState as { products: Product[] }
+        const persisted = persistedState as { products: Product[] }
 
-        // Ensure products array exists
-        if (!Array.isArray(state.products)) {
-          state.products = initialProducts
-          return state
+        // Ensure products array exists - return new object, don't mutate
+        if (!Array.isArray(persisted.products)) {
+          return { products: initialProducts }
         }
 
+        let products = persisted.products
+
         // Version 4: Merge user products with initial products (non-destructive)
-        // Only add initial products that don't exist in user data
         if (version < 4) {
-          const existingIds = new Set(state.products.map(p => p.id))
+          const existingIds = new Set(products.map(p => p.id))
           const missingInitialProducts = initialProducts.filter(p => !existingIds.has(p.id))
-          state.products = [...state.products, ...missingInitialProducts]
+          products = [...products, ...missingInitialProducts]
         }
 
         // Version 5: Add branch_prices and use_branch_prices fields
         if (version < 5) {
-          state.products = state.products.map(p => ({
+          products = products.map(p => ({
             ...p,
             branch_prices: p.branch_prices ?? [],
             use_branch_prices: p.use_branch_prices ?? false,
           }))
         }
 
-        return state
+        return { products }
       },
     }
   )
 )
 
-// Selectors - only use selectors that return stable references
-// For filtered data, use useMemo in components to avoid infinite loops
+// Selectors
 export const selectProducts = (state: ProductState) => state.products
-export const selectProductById = (id: string) => (state: ProductState) =>
-  state.products.find((p) => p.id === id)

@@ -129,7 +129,7 @@ export const usePromotionStore = create<PromotionState>()(
 
       getByBranch: (branchId) => {
         return get().promotions.filter((promo) =>
-          promo.branch_ids.includes(branchId)
+          Array.isArray(promo.branch_ids) && promo.branch_ids.includes(branchId)
         )
       },
     }),
@@ -137,17 +137,18 @@ export const usePromotionStore = create<PromotionState>()(
       name: STORAGE_KEYS.PROMOTIONS,
       version: STORE_VERSIONS.PROMOTIONS,
       migrate: (persistedState, version) => {
-        const state = persistedState as { promotions: Promotion[] }
+        const persisted = persistedState as { promotions: Promotion[] }
 
-        // Ensure promotions array exists
-        if (!Array.isArray(state.promotions)) {
-          state.promotions = initialPromotions
-          return state
+        // Ensure promotions array exists - return new object, don't mutate
+        if (!Array.isArray(persisted.promotions)) {
+          return { promotions: initialPromotions }
         }
+
+        let promotions = persisted.promotions
 
         if (version < 2) {
           // Migration: Add start_time, end_time, promotion_type_id to existing promotions
-          state.promotions = state.promotions.map((p) => ({
+          promotions = promotions.map((p) => ({
             ...p,
             start_time: p.start_time ?? '00:00',
             end_time: p.end_time ?? '23:59',
@@ -157,12 +158,12 @@ export const usePromotionStore = create<PromotionState>()(
 
         // Version 3: Non-destructive merge - only add missing initial promotions
         if (version < 3) {
-          const existingIds = new Set(state.promotions.map(p => p.id))
+          const existingIds = new Set(promotions.map(p => p.id))
           const missingPromotions = initialPromotions.filter(p => !existingIds.has(p.id))
-          state.promotions = [...state.promotions, ...missingPromotions]
+          promotions = [...promotions, ...missingPromotions]
         }
 
-        return state
+        return { promotions }
       },
     }
   )
@@ -170,5 +171,3 @@ export const usePromotionStore = create<PromotionState>()(
 
 // Selectors
 export const selectPromotions = (state: PromotionState) => state.promotions
-export const selectPromotionById = (id: string) => (state: PromotionState) =>
-  state.promotions.find((p) => p.id === id)

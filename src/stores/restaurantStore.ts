@@ -8,7 +8,7 @@ interface RestaurantState {
   // Actions
   setRestaurant: (restaurant: Restaurant) => void
   updateRestaurant: (data: RestaurantFormData) => void
-  createRestaurant: (data: RestaurantFormData) => void
+  createRestaurant: (data: RestaurantFormData) => Restaurant
   clearRestaurant: () => void
 }
 
@@ -43,6 +43,7 @@ export const useRestaurantStore = create<RestaurantState>()(
           updated_at: new Date().toISOString(),
         }
         set({ restaurant: newRestaurant })
+        return newRestaurant
       },
 
       updateRestaurant: (data) =>
@@ -62,6 +63,21 @@ export const useRestaurantStore = create<RestaurantState>()(
     {
       name: STORAGE_KEYS.RESTAURANT,
       version: STORE_VERSIONS.RESTAURANT,
+      migrate: (persistedState, version) => {
+        const persisted = persistedState as { restaurant: Restaurant | null }
+
+        // Ensure restaurant exists - return new object, don't mutate
+        if (!persisted.restaurant) {
+          return { restaurant: initialRestaurant }
+        }
+
+        // Future migrations here
+        if (version < 1) {
+          // Initial version, nothing to migrate
+        }
+
+        return { restaurant: persisted.restaurant }
+      },
     }
   )
 )

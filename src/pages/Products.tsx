@@ -24,7 +24,7 @@ import { useCategoryStore, selectCategories } from '../stores/categoryStore'
 import { useSubcategoryStore, selectSubcategories } from '../stores/subcategoryStore'
 import { useProductStore, selectProducts } from '../stores/productStore'
 import { useAllergenStore, selectAllergens } from '../stores/allergenStore'
-import { usePromotionStore } from '../stores/promotionStore'
+import { cascadeDeleteProduct } from '../services/cascadeService'
 import {
   useBranchStore,
   selectSelectedBranchId,
@@ -63,9 +63,7 @@ export function ProductsPage() {
   const products = useProductStore(selectProducts)
   const addProduct = useProductStore((s) => s.addProduct)
   const updateProduct = useProductStore((s) => s.updateProduct)
-  const deleteProduct = useProductStore((s) => s.deleteProduct)
   const allergens = useAllergenStore(selectAllergens)
-  const removeProductFromPromotions = usePromotionStore((s) => s.removeProductFromPromotions)
 
   const selectedBranchId = useBranchStore(selectSelectedBranchId)
   const selectedBranch = useBranchStore(selectBranchById(selectedBranchId))
@@ -247,24 +245,21 @@ export function ProductsPage() {
     if (!selectedProduct) return
 
     try {
-      // Validate product exists before cascade delete
-      const productExists = products.some((p) => p.id === selectedProduct.id)
-      if (!productExists) {
-        toast.error('El producto ya no existe')
+      const result = cascadeDeleteProduct(selectedProduct.id)
+
+      if (!result.success) {
+        toast.error(result.error || 'Error al eliminar el producto')
         setIsDeleteOpen(false)
         return
       }
 
-      // Clean up product references from promotions first
-      removeProductFromPromotions(selectedProduct.id)
-      deleteProduct(selectedProduct.id)
       toast.success('Producto eliminado correctamente')
       setIsDeleteOpen(false)
     } catch (error) {
       const message = handleError(error, 'ProductsPage.handleDelete')
       toast.error(`Error al eliminar el producto: ${message}`)
     }
-  }, [selectedProduct, products, deleteProduct, removeProductFromPromotions])
+  }, [selectedProduct])
 
   const handleCategoryChange = (categoryId: string) => {
     const subcats = getByCategory(categoryId)
@@ -746,3 +741,5 @@ export function ProductsPage() {
     </PageContainer>
   )
 }
+
+export default ProductsPage

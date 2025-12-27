@@ -15,3 +15,5 @@ export function OrdersPage() {
     </PageContainer>
   )
 }
+
+export default OrdersPage

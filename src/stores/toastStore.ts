@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import type { Toast } from '../types'
+import { generateId, VALIDATION_LIMITS } from '../utils/constants'
 
 interface ToastState {
   toasts: Toast[]
@@ -8,37 +9,37 @@ interface ToastState {
   clearToasts: () => void
 }
 
-const generateId = () => crypto.randomUUID()
-
 // Map para almacenar timeout IDs y poder cancelarlos
 const timeoutIds = new Map<string, ReturnType<typeof setTimeout>>()
 
-// Maximum number of toasts to prevent memory issues
-const MAX_TOASTS = 5
+// Use centralized constant for max toasts
+const { MAX_TOASTS } = VALIDATION_LIMITS
 
-export const useToastStore = create<ToastState>((set, get) => ({
+export const useToastStore = create<ToastState>((set) => ({
   toasts: [],
 
   addToast: (toast) => {
     const id = generateId()
     const newToast: Toast = { ...toast, id }
 
-    // Remove oldest toasts if exceeding limit
-    const currentToasts = get().toasts
-    if (currentToasts.length >= MAX_TOASTS) {
-      const oldestToast = currentToasts[0]
-      // Clear timeout for oldest toast before removing
-      const oldTimeoutId = timeoutIds.get(oldestToast.id)
-      if (oldTimeoutId) {
-        clearTimeout(oldTimeoutId)
-        timeoutIds.delete(oldestToast.id)
+    // Use set() with callback to atomically handle the limit check and update
+    set((state) => {
+      let updatedToasts = [...state.toasts]
+
+      // Remove oldest toasts if exceeding limit
+      while (updatedToasts.length >= MAX_TOASTS) {
+        const oldestToast = updatedToasts[0]
+        // Clear timeout for oldest toast before removing
+        const oldTimeoutId = timeoutIds.get(oldestToast.id)
+        if (oldTimeoutId) {
+          clearTimeout(oldTimeoutId)
+          timeoutIds.delete(oldestToast.id)
+        }
+        updatedToasts = updatedToasts.slice(1)
       }
-      set((state) => ({
-        toasts: [...state.toasts.slice(1), newToast],
-      }))
-    } else {
-      set((state) => ({ toasts: [...state.toasts, newToast] }))
-    }
+
+      return { toasts: [...updatedToasts, newToast] }
+    })
 
     // Auto-remove after duration
     const duration = toast.duration ?? 3000

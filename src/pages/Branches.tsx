@@ -17,12 +17,8 @@ import {
 import { usePagination } from '../hooks/usePagination'
 import { useBranchStore, selectBranches } from '../stores/branchStore'
 import { useCategoryStore } from '../stores/categoryStore'
-import { useSubcategoryStore } from '../stores/subcategoryStore'
-import { useProductStore } from '../stores/productStore'
-import { usePromotionStore } from '../stores/promotionStore'
 import { useRestaurantStore, selectRestaurant } from '../stores/restaurantStore'
-import { useTableStore } from '../stores/tableStore'
-import { useOrderHistoryStore } from '../stores/orderHistoryStore'
+import { cascadeDeleteBranch } from '../services/cascadeService'
 import { toast } from '../stores/toastStore'
 import { validateBranch, type ValidationErrors } from '../utils/validation'
 import { handleError } from '../utils/logger'
@@ -48,17 +44,9 @@ export function BranchesPage() {
   const branches = useBranchStore(selectBranches)
   const addBranch = useBranchStore((s) => s.addBranch)
   const updateBranch = useBranchStore((s) => s.updateBranch)
-  const deleteBranch = useBranchStore((s) => s.deleteBranch)
   const selectBranch = useBranchStore((s) => s.selectBranch)
 
   const getByBranch = useCategoryStore((s) => s.getByBranch)
-  const deleteByBranchCategory = useCategoryStore((s) => s.deleteByBranch)
-  const deleteByCategories = useSubcategoryStore((s) => s.deleteByCategories)
-  const deleteByProductCategories = useProductStore((s) => s.deleteByCategories)
-  const removeBranchFromProductPrices = useProductStore((s) => s.removeBranchFromProductPrices)
-  const removeBranchFromPromotions = usePromotionStore((s) => s.removeBranchFromPromotions)
-  const deleteTablesByBranch = useTableStore((s) => s.deleteByBranch)
-  const deleteOrderHistoryByBranch = useOrderHistoryStore((s) => s.deleteByBranch)
 
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
@@ -156,30 +144,13 @@ export function BranchesPage() {
     if (!selectedBranch) return
 
     try {
-      // Validate branch exists before cascade delete
-      const branchExists = branches.some((b) => b.id === selectedBranch.id)
-      if (!branchExists) {
-        toast.error('La sucursal ya no existe')
+      const result = cascadeDeleteBranch(selectedBranch.id)
+
+      if (!result.success) {
+        toast.error(result.error || 'Error al eliminar la sucursal')
         setIsDeleteOpen(false)
         return
       }
-
-      // Get categories for cascade delete
-      const branchCategories = getByBranch(selectedBranch.id)
-      const categoryIds = branchCategories.map((c) => c.id)
-
-      // Cascade delete: products, subcategories, categories, tables, orderHistory, promotions, branch
-      // Order matters: delete children first, then parents
-      if (categoryIds.length > 0) {
-        deleteByProductCategories(categoryIds)
-        deleteByCategories(categoryIds)
-      }
-      deleteByBranchCategory(selectedBranch.id)
-      deleteTablesByBranch(selectedBranch.id)
-      deleteOrderHistoryByBranch(selectedBranch.id)
-      removeBranchFromProductPrices(selectedBranch.id)
-      removeBranchFromPromotions(selectedBranch.id)
-      deleteBranch(selectedBranch.id)
 
       toast.success('Sucursal eliminada correctamente')
       setIsDeleteOpen(false)
@@ -187,19 +158,7 @@ export function BranchesPage() {
       const message = handleError(error, 'BranchesPage.handleDelete')
       toast.error(`Error al eliminar la sucursal: ${message}`)
     }
-  }, [
-    selectedBranch,
-    branches,
-    getByBranch,
-    deleteByProductCategories,
-    deleteByCategories,
-    deleteByBranchCategory,
-    deleteTablesByBranch,
-    deleteOrderHistoryByBranch,
-    removeBranchFromProductPrices,
-    removeBranchFromPromotions,
-    deleteBranch,
-  ])
+  }, [selectedBranch])
 
   const columns: TableColumn<Branch>[] = useMemo(
     () => [
@@ -470,3 +429,5 @@ export function BranchesPage() {
     </PageContainer>
   )
 }
+
+export default BranchesPage

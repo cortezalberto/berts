@@ -19,6 +19,7 @@ import {
   selectAllergens,
 } from '../stores/allergenStore'
 import { useProductStore, selectProducts } from '../stores/productStore'
+import { cascadeDeleteAllergen } from '../services/cascadeService'
 import { toast } from '../stores/toastStore'
 import { validateAllergen, type ValidationErrors } from '../utils/validation'
 import { handleError } from '../utils/logger'
@@ -36,10 +37,8 @@ export function AllergensPage() {
   const allergens = useAllergenStore(selectAllergens)
   const addAllergen = useAllergenStore((s) => s.addAllergen)
   const updateAllergen = useAllergenStore((s) => s.updateAllergen)
-  const deleteAllergen = useAllergenStore((s) => s.deleteAllergen)
 
   const products = useProductStore(selectProducts)
-  const removeAllergenFromProducts = useProductStore((s) => s.removeAllergenFromProducts)
 
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
@@ -122,32 +121,28 @@ export function AllergensPage() {
     if (!selectedAllergen) return
 
     try {
-      // Validate allergen exists before delete
-      const allergenExists = allergens.some((a) => a.id === selectedAllergen.id)
-      if (!allergenExists) {
-        toast.error('El alergeno ya no existe')
+      const productCount = getProductCount(selectedAllergen.id)
+      const result = cascadeDeleteAllergen(selectedAllergen.id)
+
+      if (!result.success) {
+        toast.error(result.error || 'Error al eliminar el alergeno')
         setIsDeleteOpen(false)
         return
       }
 
-      const productCount = getProductCount(selectedAllergen.id)
-
-      // Clean up product references FIRST, then delete allergen
       if (productCount > 0) {
-        removeAllergenFromProducts(selectedAllergen.id)
         toast.warning(
           `Este alergeno estaba vinculado a ${productCount} producto(s). Se elimino la referencia.`
         )
       }
 
-      deleteAllergen(selectedAllergen.id)
       toast.success('Alergeno eliminado correctamente')
       setIsDeleteOpen(false)
     } catch (error) {
       const message = handleError(error, 'AllergensPage.handleDelete')
       toast.error(`Error al eliminar el alergeno: ${message}`)
     }
-  }, [selectedAllergen, allergens, deleteAllergen, getProductCount, removeAllergenFromProducts])
+  }, [selectedAllergen, getProductCount])
 
   const columns: TableColumn<Allergen>[] = useMemo(
     () => [
@@ -365,3 +360,5 @@ export function AllergensPage() {
     </PageContainer>
   )
 }
+
+export default AllergensPage

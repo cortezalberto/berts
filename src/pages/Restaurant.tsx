@@ -235,3 +235,5 @@ export function RestaurantPage() {
     </PageContainer>
   )
 }
+
+export default RestaurantPage

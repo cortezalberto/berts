@@ -15,3 +15,5 @@ export function StaffPage() {
     </PageContainer>
   )
 }
+
+export default StaffPage

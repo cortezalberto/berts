@@ -341,3 +341,5 @@ export function SettingsPage() {
     </PageContainer>
   )
 }
+
+export default SettingsPage

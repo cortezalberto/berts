@@ -115,8 +115,10 @@ const bottomNavigation = [
   { name: 'Configuracion', href: '/settings', icon: Settings },
 ]
 
-// Helper to get all paths from a navigation structure
-function getAllPaths(items: (NavItem | NavSubGroup)[]): string[] {
+// Memoized map of group names to their paths (computed once at module level)
+const groupPathsMap = new Map<string, string[]>()
+
+function getGroupPaths(items: (NavItem | NavSubGroup)[]): string[] {
   const paths: string[] = []
   for (const item of items) {
     if (isNavSubGroup(item)) {
@@ -126,6 +128,18 @@ function getAllPaths(items: (NavItem | NavSubGroup)[]): string[] {
     }
   }
   return paths
+}
+
+// Pre-compute all group paths at module initialization
+for (const item of navigation) {
+  if (isNavGroup(item)) {
+    groupPathsMap.set(item.name, getGroupPaths(item.children))
+    for (const child of item.children) {
+      if (isNavSubGroup(child)) {
+        groupPathsMap.set(child.name, child.children.map((c) => c.href))
+      }
+    }
+  }
 }
 
 // Helper to check if a path is active
@@ -145,14 +159,15 @@ export function Sidebar() {
     // Auto-open groups and subgroups if any child is active
     for (const item of navigation) {
       if (isNavGroup(item)) {
-        const groupPaths = getAllPaths(item.children)
+        const groupPaths = groupPathsMap.get(item.name) ?? []
         const isActive = groupPaths.some((path) => isPathActive(location.pathname, path))
         initial[item.name] = isActive
 
         // Check subgroups
         for (const child of item.children) {
           if (isNavSubGroup(child)) {
-            const subIsActive = child.children.some((c) => isPathActive(location.pathname, c.href))
+            const subPaths = groupPathsMap.get(child.name) ?? []
+            const subIsActive = subPaths.some((path) => isPathActive(location.pathname, path))
             initial[child.name] = subIsActive
           }
         }
@@ -195,7 +210,7 @@ export function Sidebar() {
         {navigation.map((item) => {
           if (isNavGroup(item)) {
             const isOpen = openGroups[item.name] ?? false
-            const groupPaths = getAllPaths(item.children)
+            const groupPaths = groupPathsMap.get(item.name) ?? []
             const hasActiveChild = groupPaths.some((path) => isPathActive(location.pathname, path))
 
             return (
@@ -335,9 +350,9 @@ export function Sidebar() {
         <button
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors duration-150"
           onClick={() => {
-            // TODO: Implement logout
-            console.log('Logout')
+            // TODO: Implement logout functionality
           }}
+          aria-label="Cerrar sesión"
         >
           <LogOut className="w-5 h-5" aria-hidden="true" />
           <span className="font-medium">Cerrar Sesion</span>

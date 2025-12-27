@@ -10,6 +10,9 @@ interface PromotionTypeState {
   deletePromotionType: (id: string) => void
 }
 
+// Use fixed date for initial data to avoid hydration mismatches
+const INITIAL_DATE = '2024-01-01T00:00:00.000Z'
+
 const initialPromotionTypes: PromotionType[] = [
   {
     id: 'promo-type-1',
@@ -17,7 +20,8 @@ const initialPromotionTypes: PromotionType[] = [
     description: 'Promociones de horario especial con descuentos',
     icon: '🍺',
     is_active: true,
-    created_at: new Date().toISOString(),
+    created_at: INITIAL_DATE,
+    updated_at: INITIAL_DATE,
   },
   {
     id: 'promo-type-2',
@@ -25,7 +29,8 @@ const initialPromotionTypes: PromotionType[] = [
     description: 'Combos pensados para familias',
     icon: '👨‍👩‍👧‍👦',
     is_active: true,
-    created_at: new Date().toISOString(),
+    created_at: INITIAL_DATE,
+    updated_at: INITIAL_DATE,
   },
   {
     id: 'promo-type-3',
@@ -33,7 +38,8 @@ const initialPromotionTypes: PromotionType[] = [
     description: 'Promociones de dos por uno',
     icon: '🎉',
     is_active: true,
-    created_at: new Date().toISOString(),
+    created_at: INITIAL_DATE,
+    updated_at: INITIAL_DATE,
   },
   {
     id: 'promo-type-4',
@@ -41,7 +47,8 @@ const initialPromotionTypes: PromotionType[] = [
     description: 'Descuentos porcentuales o fijos',
     icon: '💰',
     is_active: true,
-    created_at: new Date().toISOString(),
+    created_at: INITIAL_DATE,
+    updated_at: INITIAL_DATE,
   },
 ]
 
@@ -80,22 +87,23 @@ export const usePromotionTypeStore = create<PromotionTypeState>()(
       name: STORAGE_KEYS.PROMOTION_TYPES,
       version: STORE_VERSIONS.PROMOTION_TYPES,
       migrate: (persistedState, version) => {
-        const state = persistedState as { promotionTypes: PromotionType[] }
+        const persisted = persistedState as { promotionTypes: PromotionType[] }
 
-        // Ensure promotionTypes array exists
-        if (!Array.isArray(state.promotionTypes)) {
-          state.promotionTypes = initialPromotionTypes
-          return state
+        // Ensure promotionTypes array exists - return new object, don't mutate
+        if (!Array.isArray(persisted.promotionTypes)) {
+          return { promotionTypes: initialPromotionTypes }
         }
+
+        let promotionTypes = persisted.promotionTypes
 
         // Version 2: Non-destructive merge - only add missing initial promotion types
         if (version < 2) {
-          const existingIds = new Set(state.promotionTypes.map(pt => pt.id))
+          const existingIds = new Set(promotionTypes.map(pt => pt.id))
           const missingTypes = initialPromotionTypes.filter(pt => !existingIds.has(pt.id))
-          state.promotionTypes = [...state.promotionTypes, ...missingTypes]
+          promotionTypes = [...promotionTypes, ...missingTypes]
         }
 
-        return state
+        return { promotionTypes }
       },
     }
   )
@@ -103,7 +111,3 @@ export const usePromotionTypeStore = create<PromotionTypeState>()(
 
 // Selectors
 export const selectPromotionTypes = (state: PromotionTypeState) => state.promotionTypes
-export const selectActivePromotionTypes = (state: PromotionTypeState) =>
-  state.promotionTypes.filter((pt) => pt.is_active !== false)
-export const selectPromotionTypeById = (id: string) => (state: PromotionTypeState) =>
-  state.promotionTypes.find((pt) => pt.id === id)

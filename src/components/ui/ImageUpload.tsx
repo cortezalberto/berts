@@ -83,7 +83,7 @@ export function ImageUpload({
           ) : (
             <img
               src={value}
-              alt="Preview"
+              alt={label ? `Vista previa de ${label}` : 'Vista previa de imagen'}
               className="w-full h-40 object-cover rounded-lg border border-zinc-700"
               onError={() => setImageError(true)}
             />

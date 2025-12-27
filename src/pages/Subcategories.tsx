@@ -23,6 +23,7 @@ import {
   selectSubcategories,
 } from '../stores/subcategoryStore'
 import { useProductStore, selectProducts } from '../stores/productStore'
+import { cascadeDeleteSubcategory } from '../services/cascadeService'
 import {
   useBranchStore,
   selectSelectedBranchId,
@@ -51,11 +52,9 @@ export function SubcategoriesPage() {
   const subcategories = useSubcategoryStore(selectSubcategories)
   const addSubcategory = useSubcategoryStore((s) => s.addSubcategory)
   const updateSubcategory = useSubcategoryStore((s) => s.updateSubcategory)
-  const deleteSubcategory = useSubcategoryStore((s) => s.deleteSubcategory)
   const getByCategory = useSubcategoryStore((s) => s.getByCategory)
 
   const products = useProductStore(selectProducts)
-  const deleteProductsBySubcategory = useProductStore((s) => s.deleteBySubcategory)
 
   const selectedBranchId = useBranchStore(selectSelectedBranchId)
   const selectedBranch = useBranchStore(selectBranchById(selectedBranchId))
@@ -199,23 +198,21 @@ export function SubcategoriesPage() {
     if (!selectedSubcategory) return
 
     try {
-      // Validate subcategory exists before delete
-      const subcategoryExists = subcategories.some((s) => s.id === selectedSubcategory.id)
-      if (!subcategoryExists) {
-        toast.error('La subcategoria ya no existe')
+      const result = cascadeDeleteSubcategory(selectedSubcategory.id)
+
+      if (!result.success) {
+        toast.error(result.error || 'Error al eliminar la subcategoria')
         setIsDeleteOpen(false)
         return
       }
 
-      deleteProductsBySubcategory(selectedSubcategory.id)
-      deleteSubcategory(selectedSubcategory.id)
       toast.success('Subcategoria eliminada correctamente')
       setIsDeleteOpen(false)
     } catch (error) {
       const message = handleError(error, 'SubcategoriesPage.handleDelete')
       toast.error(`Error al eliminar la subcategoria: ${message}`)
     }
-  }, [selectedSubcategory, subcategories, deleteProductsBySubcategory, deleteSubcategory])
+  }, [selectedSubcategory])
 
   const columns: TableColumn<Subcategory>[] = useMemo(
     () => [
@@ -505,3 +502,5 @@ export function SubcategoriesPage() {
     </PageContainer>
   )
 }
+
+export default SubcategoriesPage

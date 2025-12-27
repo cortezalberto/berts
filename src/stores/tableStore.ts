@@ -120,17 +120,18 @@ export const useTableStore = create<TableState>()(
       name: STORAGE_KEYS.TABLES,
       version: STORE_VERSIONS.TABLES,
       migrate: (persistedState, version) => {
-        const state = persistedState as { tables: RestaurantTable[] }
+        const persisted = persistedState as { tables: RestaurantTable[] }
 
-        // Ensure tables array exists
-        if (!Array.isArray(state.tables)) {
-          state.tables = initialTables
-          return state
+        // Ensure tables array exists - return new object, don't mutate
+        if (!Array.isArray(persisted.tables)) {
+          return { tables: initialTables }
         }
+
+        let tables = persisted.tables
 
         // v2: Add order_time and close_time fields
         if (version < 2) {
-          state.tables = state.tables.map((table) => ({
+          tables = tables.map((table) => ({
             ...table,
             order_time: table.order_time ?? TABLE_DEFAULT_TIME,
             close_time: table.close_time ?? TABLE_DEFAULT_TIME,
@@ -142,7 +143,10 @@ export const useTableStore = create<TableState>()(
         // - solicito_pedido/pedido_cumplido: order_time = value, close_time = 00:00
         // - cuenta_solicitada: both times have values
         if (version < 6) {
-          state.tables = state.tables.map((table) => {
+          // Use a fixed fallback time for migration to ensure consistency
+          const MIGRATION_FALLBACK_TIME = '12:00'
+
+          tables = tables.map((table) => {
             if (table.status === 'libre' || table.status === 'ocupada') {
               return {
                 ...table,
@@ -153,10 +157,10 @@ export const useTableStore = create<TableState>()(
             if (table.status === 'solicito_pedido' || table.status === 'pedido_cumplido') {
               return {
                 ...table,
-                // Keep existing order_time or use current time if missing
+                // Keep existing order_time or use fixed fallback time for consistency
                 order_time: table.order_time && table.order_time !== TABLE_DEFAULT_TIME
                   ? table.order_time
-                  : new Date().toTimeString().slice(0, 5),
+                  : MIGRATION_FALLBACK_TIME,
                 close_time: TABLE_DEFAULT_TIME,
               }
             }
@@ -164,7 +168,7 @@ export const useTableStore = create<TableState>()(
           })
         }
 
-        return state
+        return { tables }
       },
     }
   )
@@ -172,7 +176,3 @@ export const useTableStore = create<TableState>()(
 
 // Selectors
 export const selectTables = (state: TableState) => state.tables
-export const selectTableById = (id: string) => (state: TableState) =>
-  state.tables.find((t) => t.id === id)
-export const selectTablesByBranch = (branchId: string | null) => (state: TableState) =>
-  branchId ? state.tables.filter((t) => t.branch_id === branchId) : []

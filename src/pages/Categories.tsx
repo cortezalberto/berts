@@ -26,7 +26,7 @@ import {
   selectBranchById,
 } from '../stores/branchStore'
 import { useSubcategoryStore } from '../stores/subcategoryStore'
-import { useProductStore } from '../stores/productStore'
+import { cascadeDeleteCategory } from '../services/cascadeService'
 import { toast } from '../stores/toastStore'
 import { validateCategory, type ValidationErrors } from '../utils/validation'
 import { handleError } from '../utils/logger'
@@ -48,14 +48,11 @@ export function CategoriesPage() {
   const categories = useCategoryStore(selectCategories)
   const addCategory = useCategoryStore((s) => s.addCategory)
   const updateCategory = useCategoryStore((s) => s.updateCategory)
-  const deleteCategory = useCategoryStore((s) => s.deleteCategory)
 
   const selectedBranchId = useBranchStore(selectSelectedBranchId)
   const selectedBranch = useBranchStore(selectBranchById(selectedBranchId))
 
-  const deleteSubcategoriesByCategory = useSubcategoryStore((s) => s.deleteByCategory)
   const getByCategory = useSubcategoryStore((s) => s.getByCategory)
-  const deleteProductsByCategory = useProductStore((s) => s.deleteByCategory)
 
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
@@ -153,32 +150,21 @@ export function CategoriesPage() {
     if (!selectedCategory) return
 
     try {
-      // Validate category exists before cascade delete
-      const categoryExists = categories.some((c) => c.id === selectedCategory.id)
-      if (!categoryExists) {
-        toast.error('La categoria ya no existe')
+      const result = cascadeDeleteCategory(selectedCategory.id)
+
+      if (!result.success) {
+        toast.error(result.error || 'Error al eliminar la categoria')
         setIsDeleteOpen(false)
         return
       }
 
-      // Cascade delete: products first, then subcategories, then category
-      // Always delete products and subcategories (even if counts are 0)
-      deleteProductsByCategory(selectedCategory.id)
-      deleteSubcategoriesByCategory(selectedCategory.id)
-      deleteCategory(selectedCategory.id)
       toast.success('Categoria eliminada correctamente')
       setIsDeleteOpen(false)
     } catch (error) {
       const message = handleError(error, 'CategoriesPage.handleDelete')
       toast.error(`Error al eliminar la categoria: ${message}`)
     }
-  }, [
-    selectedCategory,
-    categories,
-    deleteSubcategoriesByCategory,
-    deleteProductsByCategory,
-    deleteCategory,
-  ])
+  }, [selectedCategory])
 
   const columns: TableColumn<Category>[] = useMemo(
     () => [
@@ -444,3 +430,5 @@ export function CategoriesPage() {
     </PageContainer>
   )
 }
+
+export default CategoriesPage
